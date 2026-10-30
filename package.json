@@ -1,1 +1,27 @@
-{"dependencies":{"dexie":"^4.0.8","maplibre-gl":"^4.7.1","react":"^19.0.0","react-dom":"^19.0.0"},"devDependencies":{"@types/react":"^19.0.0","@types/react-dom":"^19.0.0","@vitejs/plugin-react":"^4.3.4","typescript":"^5.7.2","vite":"^6.0.7","vite-plugin-pwa":"^0.21.1"},"name":"trace-field","private":true,"scripts":{"build":"tsc -b && vite build","check:hardcoded":"node scripts/check-no-hardcoded.mjs","dev":"vite","preview":"vite preview"},"type":"module","version":"0.1.0"}
+{
+  "dependencies": {
+    "dexie": "^4.0.8",
+    "maplibre-gl": "^4.7.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@vercel/blob": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "vite-plugin-pwa": "^0.21.1"
+  },
+  "name": "trace-field",
+  "private": true,
+  "scripts": {
+    "build": "tsc -b && vite build",
+    "check:hardcoded": "node scripts/check-no-hardcoded.mjs",
+    "dev": "vite",
+    "preview": "vite preview"
+  },
+  "type": "module",
+  "version": "0.1.0"
+}

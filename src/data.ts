@@ -5,7 +5,10 @@ export interface Granule {
 export interface Manifest {
   caseId: string; product: { collection: string; maturity: string; crid: string; doi: string };
   track: number; frame: number; variableLabel: string; commonGridM: number; haPerPixel: number;
-  granules: Granule[]; manifestHash: string;
+  granules: Granule[]; manifestHash: string; method?: string;
+  browseGrid?: { stepDeg: number; haPerPixel: number; note: string };
+  qaFlags?: string[];
+  exposure?: { buildingsWithin1km?: Record<string, number>; namedSettlementsInAOI?: number; note?: string };
   sentinel1RTC: { band: string; dates: string[]; polarizations: string[] };
   sentinel2: { tile: string; acquisitions: number; clearUnder20Pct: number };
 }
@@ -13,13 +16,21 @@ export interface Candidate {
   id: string; title: string; question: string; centroid: [number, number]; distanceKm: number;
   robustPx: number; fringePx: number; areaHa: number; robustAreaHa: number;
   core: [number, number][]; fringe: [number, number][]; ghost: [number, number][];
-  hhDb: number[]; hvDb: number[]; provenance: string; status: string;
+  hhIntensity: number[]; hvIntensity: (number | null)[];
+  meanDelta: number; direction: string; provenance: string; status: string;
+}
+export interface Drivers {
+  dischargeM3sByDate: Record<string, number>; dischargeSource: string;
+  rainMmWindows: Record<string, number>; rainPairTotalMm: number; rainSource: string; stageSource: string;
 }
 export interface CaseData {
   caseId: string; site: { name: string; lat: number; lon: number };
-  dates: string[]; pair: string[]; thresholdDb: number; thresholdNote: string;
-  candidates: Candidate[]; sensorRace: { opticalClear: number; opticalTotal: number; nisarSeen: number; nisarTotal: number; s1Dates: number };
-  placeWatch: { bn: string; en: string }; manifestHash: string; caseHash: string;
+  dates: string[]; pair: string[]; thresholdNote: string;
+  candidates: Candidate[]; drivers: Drivers;
+  sensorRace: { opticalClear: number; opticalTotal: number; nisarSeen: number; nisarTotal: number; s1Dates: number };
+  placeWatch: { bn: string; en: string };
+  walkGrid: { date: string; layer: string; values: number[][] };
+  manifestHash: string; caseHash: string;
 }
 
 export async function loadCase(): Promise<{ caseData: CaseData; manifest: Manifest }> {

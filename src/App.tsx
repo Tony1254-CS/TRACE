@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { loadCase, nextPass, haversineKm, bearingDeg, mulberry32, type CaseData, type Manifest, type Candidate } from './data';
+import { loadCase, nextPass, haversineKm, bearingDeg, type CaseData, type Manifest, type Candidate } from './data';
 import { db, type Observation, type ObsAnswer } from './db';
-import { syncAllQueued, readWebInbox, type WebInboxRow } from './sync';
+import { syncAllQueued, readWebInbox, fetchInboxRows, type WebInboxRow } from './sync';
 
 type Tab = 'inbox' | 'map' | 'verify' | 'radar' | 'place';
 const TABS: { id: Tab; label: string }[] = [
@@ -63,7 +63,7 @@ export default function App() {
         {tab === 'inbox' && <Inbox caseData={caseData} onOpen={(c) => { setSelected(c); setTab('map'); }} queuedCount={queuedCount} />}
         {tab === 'map' && <CaseMap caseData={caseData} manifest={manifest} sel={sel} onSelect={setSelected} onPassport={() => setPassport(true)} onVerify={() => setTab('verify')} />}
         {tab === 'verify' && <Verify caseData={caseData} sel={sel} onSelect={setSelected} />}
-        {tab === 'radar' && <WalkRadar />}
+        {tab === 'radar' && <WalkRadar caseData={caseData} />}
         {tab === 'place' && <MyPlace caseData={caseData} sel={sel} />}
       </main>
       <nav className="tabbar">
@@ -82,7 +82,13 @@ export default function App() {
 function Inbox({ caseData, onOpen, queuedCount }: { caseData: CaseData; onOpen: (c: Candidate) => void; queuedCount: number }) {
   const [dl, setDl] = useState(-1);
   const [inbox, setInbox] = useState<WebInboxRow[]>(readWebInbox());
-  useEffect(() => { const i = setInterval(() => setInbox(readWebInbox()), 2000); return () => clearInterval(i); }, []);
+  useEffect(() => {
+    let live = true;
+    const tick = async () => { const rows = await fetchInboxRows(); if (live) setInbox(rows); };
+    void tick();
+    const i = setInterval(() => void tick(), 2000);
+    return () => { live = false; clearInterval(i); };
+  }, []);
   const r = caseData.sensorRace;
 
   async function downloadCase() {
@@ -135,6 +141,14 @@ function Inbox({ caseData, onOpen, queuedCount }: { caseData: CaseData; onOpen: 
       </div>
 
       <div className="card" style={{ cursor: 'default' }}>
+        <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>DRIVERS — WHY THE RIVER MOVED</div>
+        <div className="rowline"><span>Jamuna discharge {caseData.pair[0]}</span><span className="mono">{caseData.drivers.dischargeM3sByDate[caseData.pair[0]]} m³/s</span></div>
+        <div className="rowline"><span>Jamuna discharge {caseData.pair[1]}</span><span className="mono">{caseData.drivers.dischargeM3sByDate[caseData.pair[1]]} m³/s</span></div>
+        <div className="rowline"><span>Rain over the pair window</span><span className="mono">{caseData.drivers.rainPairTotalMm} mm</span></div>
+        <div className="dim" style={{ fontSize: 12 }}>Discharge: GloFAS via Open-Meteo Flood API. Rain: NASA POWER. The BWDB/FFWC Chilmari gauge has no public API — discharge stands in for stage, and says so.</div>
+      </div>
+
+      <div className="card" style={{ cursor: 'default' }}>
         <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>WEB REVIEW — EVIDENCE RETURN</div>
         <div className="verdict" style={{ fontSize: 22, margin: '6px 0' }}>{awaiting} observation{awaiting === 1 ? '' : 's'} awaiting review</div>
         {inbox.map((row, i) => (
@@ -153,8 +167,9 @@ function CaseMap({ caseData, manifest, sel, onSelect, onPassport, onVerify }: {
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [dateIdx, setDateIdx] = useState(caseData.dates.length - 1);
-  const hh = useTick(sel.hhDb[dateIdx]);
-  const hv = useTick(sel.hvDb[dateIdx]);
+  const hh = useTick(sel.hhIntensity[dateIdx], 0);
+  const hvRaw = sel.hvIntensity[dateIdx];
+  const hv = useTick(hvRaw ?? 0, 0);
 
   useEffect(() => {
     let map: import('maplibre-gl').Map | undefined; let dead = false;
@@ -210,9 +225,10 @@ function CaseMap({ caseData, manifest, sel, onSelect, onPassport, onVerify }: {
         ))}
       </div>
       <div className="rowline"><span>{sel.id} · {sel.title}</span><span className="mono">{caseData.dates[dateIdx]}</span></div>
-      <div className="rowline"><span className="dim">HH gamma-0</span><span className="mono amber">{hh} dB</span></div>
-      <div className="rowline"><span className="dim">HV gamma-0</span><span className="mono teal">{hv} dB</span></div>
-      <div className="rowline"><span className="dim">Granule grid</span><span className="mono">{granule.gridM} m native · {manifest.commonGridM} m common</span></div>
+      <div className="rowline"><span className="dim">HH intensity (browse, 0–255)</span><span className="mono amber">{hh}</span></div>
+      <div className="rowline"><span className="dim">HV intensity (browse, 0–255)</span><span className="mono teal">{hvRaw === null ? 'no HV render this date — see Passport QA' : hv}</span></div>
+      <div className="rowline"><span className="dim">Jamuna discharge (GloFAS)</span><span className="mono">{caseData.drivers.dischargeM3sByDate[caseData.dates[dateIdx]]} m³/s</span></div>
+      <div className="rowline"><span className="dim">Granule grid</span><span className="mono">{granule.gridM} m native GCOV · browse grid for polygons</span></div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
         {caseData.candidates.map((c) => (
           <button key={c.id} className="chip" style={{ minHeight: 44, cursor: 'pointer', color: c.id === sel.id ? '#FFB224' : undefined }} onClick={() => onSelect(c)}>{c.id}</button>
@@ -241,18 +257,21 @@ function Passport({ caseData, manifest, sel, onClose }: { caseData: CaseData; ma
         </span>
       </div>
       <table><tbody>
-        <tr><td>GRANULE</td><td className="granule">{gA.granuleId}</td></tr>
-        <tr><td>DATES</td><td className="mono">{caseData.pair[0]} → {caseData.pair[1]} · same track 19, 12-day repeat cycle</td></tr>
-        <tr><td>VARIABLE</td><td>{manifest.variableLabel}</td></tr>
+        <tr><td>GRANULE (PAIR END)</td><td className="granule">{gA.granuleId}</td></tr>
+        <tr><td>DATES</td><td className="mono">{caseData.pair[0]} → {caseData.pair[1]} · same track 19, same 20 MHz DH product family</td></tr>
+        <tr><td>VARIABLE</td><td>{manifest.variableLabel} — measured here from the ASF browse render of HHHH/HVHV (see Method)</td></tr>
         <tr><td>LAYERS SHOWN</td><td className="mono">{gA.layersFrequencyA.join(', ')} — only polarizations in this granule</td></tr>
-        <tr><td>THRESHOLD</td><td className="mono">{caseData.thresholdDb} dB · {caseData.thresholdNote}</td></tr>
-        <tr><td>AREA</td><td className="mono">{sel.areaHa} ha on a {manifest.commonGridM} m grid ({manifest.haPerPixel} ha/pixel) · robust {sel.robustAreaHa} ha</td></tr>
+        <tr><td>METHOD</td><td style={{ fontSize: 12 }}>{manifest.method}</td></tr>
+        <tr><td>THRESHOLD</td><td style={{ fontSize: 12 }}>{caseData.thresholdNote}</td></tr>
+        <tr><td>AREA</td><td className="mono">{sel.areaHa} ha on the browse grid ({manifest.browseGrid?.haPerPixel} ha/pixel, ~50 m) · robust core {sel.robustAreaHa} ha · native GCOV grid is {manifest.commonGridM} m</td></tr>
+        <tr><td>DRIVERS</td><td className="mono">Discharge {caseData.drivers.dischargeM3sByDate[caseData.pair[0]]} → {caseData.drivers.dischargeM3sByDate[caseData.pair[1]]} m³/s (GloFAS) · rain over the pair {caseData.drivers.rainPairTotalMm} mm (NASA POWER)</td></tr>
+        <tr><td>EXPOSURE (OSM)</td><td className="mono">{manifest.exposure?.buildingsWithin1km?.[sel.id] ?? '—'} mapped buildings within 1 km · {manifest.exposure?.namedSettlementsInAOI} named settlements in the case area · © OpenStreetMap contributors (ODbL)</td></tr>
         <tr><td>PRODUCT</td><td className="mono">{manifest.product.collection} · {manifest.product.maturity} · CRID {manifest.product.crid}</td></tr>
-        <tr><td>QC FLAGS</td><td className="mono">orbit accuracy {gA.orbitAccuracy}{gA.orbitAccuracy === 'F' ? ' (forecast — treat with care)' : ''} · native grid {gA.gridM} m, resampled to {manifest.commonGridM} m</td></tr>
+        <tr><td>QC FLAGS</td><td style={{ fontSize: 12 }}>orbit accuracy {gA.orbitAccuracy} · {(manifest.qaFlags ?? []).join(' ')}</td></tr>
         <tr><td>MANIFEST HASH</td><td className="granule">{manifest.manifestHash}</td></tr>
-        <tr><td>PROVENANCE</td><td><span className="chip sim">{sel.provenance}</span> <span className="chip">UNVERIFIED</span> <span className="chip teal">CROSSCHECKED: S1 C-BAND</span></td></tr>
+        <tr><td>PROVENANCE</td><td><span className="chip teal">{sel.provenance}</span> <span className="chip">MEASURED: CATALOGUE + BROWSE</span></td></tr>
       </tbody></table>
-      <p className="dim" style={{ fontSize: 12 }}>Dates, granule, variable and grid are MEASURED from the catalogue (Step 0 audit). The polygon itself is {sel.provenance.toLowerCase()} until the GCOV precompute replaces it — the chip says so on purpose.</p>
+      <p className="dim" style={{ fontSize: 12 }}>This polygon was computed from real NISAR imagery of these two granules. The one upgrade left is radiometric: calibrated float gamma-0 from the .h5 (Earthdata login) instead of the browse render — same pipeline, better numbers.</p>
     </div>
   );
 }
@@ -347,29 +366,23 @@ function Verify({ caseData, sel, onSelect }: { caseData: CaseData; sel: Candidat
 }
 
 /* ---------------- Walk on the Radar ---------------- */
-function WalkRadar() {
+function WalkRadar({ caseData }: { caseData: CaseData }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [dbVal, setDbVal] = useState<number | null>(null);
+  const [val, setVal] = useState<number | null>(null);
   const audioRef = useRef<{ ctx: AudioContext; osc: OscillatorNode } | null>(null);
   const grid = useMemo(() => {
-    // SIMULATED field, seeded and deterministic. Physically ordered:
-    // smooth open water darkest (specular reflection), then sand, wet land, vegetation brightest.
-    const rnd = mulberry32(19076); const N = 48; const cells: number[] = [];
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const river = Math.abs(x - N * (0.35 + 0.25 * Math.sin(y / 7))) < 6;
-      const base = river ? -23 : x > N * 0.72 ? -16.5 : -12.5;
-      const speckle = (rnd() + rnd() + rnd()) / 3 - 0.5; // multiplicative speckle, averaged looks
-      cells.push(parseFloat((base + speckle * 4).toFixed(1)));
-    }
-    return { N, cells };
-  }, []);
+    // REAL field: NISAR HH browse intensity over the case AOI, latest date,
+    // computed by precompute.py from the actual granule — not a simulation.
+    const values = caseData.walkGrid.values;
+    return { N: values.length, cells: values.flat() };
+  }, [caseData]);
 
   useEffect(() => {
     const cv = canvasRef.current; if (!cv) return;
     const g = cv.getContext('2d')!; const { N, cells } = grid; const s = cv.width / N;
     for (let i = 0; i < cells.length; i++) {
-      const v = cells[i]; const t = Math.max(0, Math.min(1, (v + 26) / 18));
-      g.fillStyle = v < -20 ? '#12484d' : `rgb(${Math.round(30 + t * 225)},${Math.round(40 + t * 140)},${Math.round(45 + t * 40)})`;
+      const v = cells[i]; const t = Math.max(0, Math.min(1, v / 255));
+      g.fillStyle = v < 45 ? '#12484d' : `rgb(${Math.round(30 + t * 225)},${Math.round(40 + t * 140)},${Math.round(45 + t * 40)})`;
       g.fillRect((i % N) * s, Math.floor(i / N) * s, s + 1, s + 1);
     }
   }, [grid]);
@@ -379,8 +392,8 @@ function WalkRadar() {
     const x = Math.floor(((e.clientX - r.left) / r.width) * grid.N);
     const y = Math.floor(((e.clientY - r.top) / r.height) * grid.N);
     const v = grid.cells[Math.max(0, Math.min(grid.cells.length - 1, y * grid.N + x))];
-    if (v !== dbVal) {
-      setDbVal(v);
+    if (v !== val) {
+      setVal(v);
       if ('vibrate' in navigator) navigator.vibrate(8); // Android only — iOS Safari has no vibrate
       try {
         if (!audioRef.current) {
@@ -388,20 +401,22 @@ function WalkRadar() {
           gain.gain.value = 0.04; osc.connect(gain); gain.connect(ctx.destination); osc.start();
           audioRef.current = { ctx, osc };
         }
-        audioRef.current.osc.frequency.value = 110 + ((v + 26) / 18) * 660;
+        audioRef.current.osc.frequency.value = 110 + (v / 255) * 660;
       } catch { /* audio is an encoding aid, not required */ }
     }
   }
+  const cls = val === null ? '' : val < 45 ? 'consistent with smooth open water (dark — specular reflection)' : val > 120 ? 'consistent with rough or vegetated land (bright)' : 'in between — wet land or sand, the contested zone';
   return (
     <>
-      <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>WALK ON THE RADAR · <span className="chip sim">SIMULATED FIELD</span></div>
+      <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>WALK ON THE RADAR · <span className="chip teal">REAL NISAR HH · {caseData.walkGrid.date}</span></div>
       <h1 style={{ fontSize: 25, margin: '6px 0' }}>Drag a finger across the scene</h1>
       <div className="walk" onPointerMove={probe} onPointerDown={probe}>
         <canvas ref={canvasRef} width={480} height={480} />
-        <div className="dbread">{dbVal === null ? '— dB' : `${dbVal} dB`}</div>
+        <div className="dbread">{val === null ? 'HH —' : `HH ${Math.round(val)} / 255`}</div>
       </div>
       <p className="dim" style={{ fontSize: 13 }}>
-        Pitch and vibration follow the gamma-0 value under your finger — dark smooth water low, bright land high.
+        {val !== null && <span className="mono" style={{ color: 'var(--bone)' }}>Under your finger: {cls}. </span>}
+        Pitch and vibration follow the real HH browse intensity under your finger — dark smooth water low, bright land high.
         Walk it with GPS on site, or drag from a chair. <em>An encoding of data, not a sound from space.</em>
       </p>
     </>

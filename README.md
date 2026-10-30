@@ -35,16 +35,23 @@ Reproduce: `python3 scripts/step0_audit.py`. Full report:
 Cross-checks: Sentinel-2 tile T45RYJ had 49 acquisitions in the window,
 only 5 with cloud <20% (sensor race is real). Sentinel-1 RTC: 18 dates,
 relative orbits 114/150, VV/VH — C-band context only, labelled as such.
-Not yet verified, slots marked UNVERIFIED in `manifest.json`: GPM IMERG,
-BWDB/FFWC river stage, JRC Global Surface Water, WorldPop/OSM exposure.
+Verified since v2 (in `manifest.json`): GloFAS discharge, NASA POWER
+rain, OSM exposure via Overpass. Still open: BWDB/FFWC stage (no public
+API — GloFAS discharge stands in, labelled), JRC, WorldPop grid.
 
-**Honesty rule in the code:** GCOV pixel processing has not run yet, so
-the change candidates in `public/data/case.json` are seeded, deterministic
-(never `Math.random()`), physically ordered, and carry a **SIMULATED**
-chip in the UI and Passport. The Python precompute
-(`rasterio`/`rio-cogeo`, offline) replaces them with real masks — robust
-core = agreement across Otsu offsets / filter windows / MMU settings
-(a robustness measure, not a probability).
+**Honesty status (v2):** the change candidates are **real** —
+`precompute/precompute.py` downloads the public ASF browse renders of
+the nine granules (LATLON composite = HH/HV/HH, verified channel by
+channel) and computes robust change between 2026-07-09 and 2026-10-13
+with a 12-setting ensemble (thresholds × median windows × MMU sizes;
+robust core = agreement across all settings — a robustness measure, not
+a probability). Polygons, areas, HH/HV intensity series, the Walk field
+and the Passport are derived from those granules and chipped DERIVED.
+One upgrade remains, stated plainly: browse renders are 8-bit, so the
+app shows intensity, not calibrated gamma-0 dB. The .h5 files return
+401 without an Earthdata login; with one, the same pipeline runs on
+float GCOV layers. Browse PNGs (~96 MB, public at ASF) are not in git —
+`precompute.py` re-fetches them via CMR.
 
 ## Features
 

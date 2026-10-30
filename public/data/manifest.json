@@ -1,6 +1,6 @@
 {
  "caseId": "chilmari-track19-frame076",
- "generated": "2026-10-31",
+ "generated": "2026-10-31 v2",
  "audit": "STEP0 v1 - NASA CMR NISAR_L2_GCOV_PROVISIONAL_V1 + ASF GCOV docs + Planetary Computer STAC",
  "product": {
   "collection": "NISAR_L2_GCOV_PROVISIONAL_V1",
@@ -190,5 +190,50 @@
   "jrcGlobalSurfaceWater": "UNVERIFIED",
   "worldPopOsmExposure": "UNVERIFIED - OSM credit required under ODbL when used"
  },
- "manifestHash": "sha256:e7131771c45603d959535adfc2109fc112626b510484a0c290b450f378c1ee8d"
+ "manifestHash": "sha256:b43d0d69bcf18acdb3928e521cc875b2095cdf00a0c0223a26afa93e4b90fd36",
+ "method": "Browse-derived: ASF LATLON browse (HH/HV/HH composite, R==B verified, R~HHHH r=0.86, G~HVHV r=0.85), full-frame percentile harmonisation, ensemble of 12 settings (3 thresholds x 2 median windows x 2 MMU). Robust = change in all 12, fringe = change in some. Calibrated GCOV float processing is gated on an Earthdata login (h5 returns 401).",
+ "browseGrid": {
+  "stepDeg": 0.00045,
+  "haPerPixel": 0.226,
+  "note": "Areas are computed on the ~50 m browse grid, not the 20 m native GCOV grid."
+ },
+ "qaFlags": [
+  "2026-09-07 HVHV browse is black over the whole AOI (mean 1.0) - defective render, HV excluded for that date; HH unaffected.",
+  "40 MHz dates (2026-07-21, 2026-08-14) render with different texture - used in the series, never as a change-pair anchor.",
+  "One top cluster was rejected: nodata-black in July, data in October (coverage artefact at the AOI edge).",
+  "Stable-land control patch (east farmland) varies 116-138 intensity across the 9 dates after harmonisation."
+ ],
+ "drivers": {
+  "dischargeM3sByDate": {
+   "2026-06-27": 37153,
+   "2026-07-09": 35236,
+   "2026-07-21": 50118,
+   "2026-08-14": 26241,
+   "2026-08-26": 28053,
+   "2026-09-07": 27226,
+   "2026-09-19": 26241,
+   "2026-10-01": 16481,
+   "2026-10-13": 11994
+  },
+  "dischargeSource": "GloFAS river discharge via Open-Meteo Flood API, Chilmari point",
+  "rainMmWindows": {
+   "2026-06-27->2026-07-09": 241.3,
+   "2026-07-10->2026-08-14": 432.8,
+   "2026-08-15->2026-09-19": 287.5,
+   "2026-09-20->2026-10-13": 74.4
+  },
+  "rainPairTotalMm": 840.1,
+  "rainSource": "NASA POWER PRECTOTCORR daily, Chilmari point",
+  "stageSource": "BWDB/FFWC Chilmari gauge has no public API found 2026-10-31; GloFAS discharge used as the hydrological driver, labelled as such."
+ },
+ "exposure": {
+  "source": "OpenStreetMap via Overpass API, 2026-10-31 (ODbL - credit OpenStreetMap contributors)",
+  "buildingsWithin1km": {
+   "CH-01": 731,
+   "CH-02": 650,
+   "CH-03": 0
+  },
+  "namedSettlementsInAOI": 28,
+  "note": "Building counts are OSM-mapped features within 1 km of each candidate centroid; OSM completeness varies, so these are a floor, not a census. WorldPop grid not yet ingested."
+ }
 }
