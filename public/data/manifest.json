@@ -1,0 +1,194 @@
+{
+ "caseId": "chilmari-track19-frame076",
+ "generated": "2026-10-31",
+ "audit": "STEP0 v1 - NASA CMR NISAR_L2_GCOV_PROVISIONAL_V1 + ASF GCOV docs + Planetary Computer STAC",
+ "product": {
+  "collection": "NISAR_L2_GCOV_PROVISIONAL_V1",
+  "maturity": "PROVISIONAL",
+  "version": 1,
+  "crid": "P05023",
+  "doi": "10.5067/NIL2GCOV-P1"
+ },
+ "track": 19,
+ "frame": 76,
+ "orbitDirection": "D",
+ "site": {
+  "name": "Chilmari, Jamuna",
+  "lat": 25.5667,
+  "lon": 89.6917
+ },
+ "variable": "gamma0",
+ "variableLabel": "gamma-0 power (dB = 10*log10 of gamma-0)",
+ "sigmaNote": "sigma-0 is not native; only via rtcGammaToSigmaFactor layer",
+ "commonGridM": 20,
+ "haPerPixel": 0.04,
+ "granules": [
+  {
+   "date": "2026-06-27",
+   "granuleId": "NISAR_L2_PR_GCOV_024_019_D_076_2005_DHDH_M_20260627T124243_20260627T124317_P05023_N_F_J_001",
+   "bandwidthMHz": 20,
+   "polPrimary": "DH",
+   "orbitAccuracy": "N",
+   "gridM": 20,
+   "layersFrequencyA": [
+    "HHHH",
+    "HVHV"
+   ]
+  },
+  {
+   "date": "2026-07-09",
+   "granuleId": "NISAR_L2_PR_GCOV_025_019_D_076_2005_DHDH_M_20260709T124242_20260709T124317_P05023_N_F_J_001",
+   "bandwidthMHz": 20,
+   "polPrimary": "DH",
+   "orbitAccuracy": "N",
+   "gridM": 20,
+   "layersFrequencyA": [
+    "HHHH",
+    "HVHV"
+   ]
+  },
+  {
+   "date": "2026-07-21",
+   "granuleId": "NISAR_L2_PR_GCOV_026_019_D_076_4005_DHDH_A_20260721T124241_20260721T124316_P05023_N_F_J_001",
+   "bandwidthMHz": 40,
+   "polPrimary": "DH",
+   "orbitAccuracy": "N",
+   "gridM": 10,
+   "layersFrequencyA": [
+    "HHHH",
+    "HVHV"
+   ]
+  },
+  {
+   "date": "2026-08-14",
+   "granuleId": "NISAR_L2_PR_GCOV_028_019_D_076_4005_DHDH_A_20260814T124240_20260814T124315_P05023_N_F_J_001",
+   "bandwidthMHz": 40,
+   "polPrimary": "DH",
+   "orbitAccuracy": "N",
+   "gridM": 10,
+   "layersFrequencyA": [
+    "HHHH",
+    "HVHV"
+   ]
+  },
+  {
+   "date": "2026-08-26",
+   "granuleId": "NISAR_L2_PR_GCOV_029_019_D_076_2005_QPDH_A_20260826T124240_20260826T124315_P05023_N_F_J_001",
+   "bandwidthMHz": 20,
+   "polPrimary": "QP",
+   "orbitAccuracy": "N",
+   "gridM": 20,
+   "layersFrequencyA": [
+    "HHHH",
+    "HVHV",
+    "HHVV",
+    "VVVV",
+    "VHVH"
+   ]
+  },
+  {
+   "date": "2026-09-07",
+   "granuleId": "NISAR_L2_PR_GCOV_030_019_D_076_2005_DHDH_M_20260907T124240_20260907T124314_P05023_N_F_J_001",
+   "bandwidthMHz": 20,
+   "polPrimary": "DH",
+   "orbitAccuracy": "N",
+   "gridM": 20,
+   "layersFrequencyA": [
+    "HHHH",
+    "HVHV"
+   ]
+  },
+  {
+   "date": "2026-09-19",
+   "granuleId": "NISAR_L2_PR_GCOV_031_019_D_076_2005_QPDH_A_20260919T124240_20260919T124314_P05023_F_F_J_001",
+   "bandwidthMHz": 20,
+   "polPrimary": "QP",
+   "orbitAccuracy": "F",
+   "gridM": 20,
+   "layersFrequencyA": [
+    "HHHH",
+    "HVHV",
+    "HHVV",
+    "VVVV",
+    "VHVH"
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "granuleId": "NISAR_L2_PR_GCOV_032_019_D_076_2005_DHDH_M_20261001T124240_20261001T124314_P05023_N_F_J_001",
+   "bandwidthMHz": 20,
+   "polPrimary": "DH",
+   "orbitAccuracy": "N",
+   "gridM": 20,
+   "layersFrequencyA": [
+    "HHHH",
+    "HVHV"
+   ]
+  },
+  {
+   "date": "2026-10-13",
+   "granuleId": "NISAR_L2_PR_GCOV_033_019_D_076_2005_DHDH_M_20261013T124240_20261013T124315_P05023_N_F_J_001",
+   "bandwidthMHz": 20,
+   "polPrimary": "DH",
+   "orbitAccuracy": "N",
+   "gridM": 20,
+   "layersFrequencyA": [
+    "HHHH",
+    "HVHV"
+   ]
+  }
+ ],
+ "sentinel1RTC": {
+  "source": "Planetary Computer STAC sentinel-1-rtc (ASF RTC processing)",
+  "band": "C-band",
+  "polarizations": [
+   "VV",
+   "VH"
+  ],
+  "relativeOrbits": [
+   114,
+   150
+  ],
+  "dates": [
+   "2026-07-01",
+   "2026-07-03",
+   "2026-07-13",
+   "2026-07-15",
+   "2026-07-25",
+   "2026-07-27",
+   "2026-08-06",
+   "2026-08-08",
+   "2026-08-18",
+   "2026-08-20",
+   "2026-08-30",
+   "2026-09-01",
+   "2026-09-11",
+   "2026-09-13",
+   "2026-09-23",
+   "2026-09-25",
+   "2026-10-05",
+   "2026-10-07"
+  ]
+ },
+ "sentinel2": {
+  "tile": "T45RYJ",
+  "acquisitions": 49,
+  "clearUnder20Pct": 5,
+  "window": [
+   "2026-06-27",
+   "2026-10-12"
+  ],
+  "sameDayCloudOnNisarDates": {
+   "2026-06-27": 85.3,
+   "2026-08-26": 84.3,
+   "2026-09-07": 52.1
+  }
+ },
+ "unverifiedSlots": {
+  "gpmImergRain": "UNVERIFIED",
+  "bwdbFfwcStage": "UNVERIFIED",
+  "jrcGlobalSurfaceWater": "UNVERIFIED",
+  "worldPopOsmExposure": "UNVERIFIED - OSM credit required under ODbL when used"
+ },
+ "manifestHash": "sha256:e7131771c45603d959535adfc2109fc112626b510484a0c290b450f378c1ee8d"
+}

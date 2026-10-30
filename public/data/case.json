@@ -1,0 +1,359 @@
+{
+ "caseId": "chilmari-track19-frame076",
+ "site": {
+  "name": "Chilmari, Jamuna",
+  "lat": 25.5667,
+  "lon": 89.6917
+ },
+ "track": 19,
+ "frame": 76,
+ "dates": [
+  "2026-06-27",
+  "2026-07-09",
+  "2026-07-21",
+  "2026-08-14",
+  "2026-08-26",
+  "2026-09-07",
+  "2026-09-19",
+  "2026-10-01",
+  "2026-10-13"
+ ],
+ "variable": "gamma0",
+ "thresholdDb": 3.0,
+ "thresholdNote": "Candidate = |change in gamma-0 HH| at or above thresholdDb between pair dates, on the 20 m common grid. Agreement across Otsu offsets / filter windows / MMU settings is a robustness measure, not a probability.",
+ "pair": [
+  "2026-07-09",
+  "2026-08-14"
+ ],
+ "candidates": [
+  {
+   "id": "CH-01",
+   "title": "East char, Chilmari",
+   "question": "Did open water reach this char between 9 Jul and 14 Aug?",
+   "centroid": [
+    89.714,
+    25.578
+   ],
+   "distanceKm": 2.4,
+   "robustPx": 1840,
+   "fringePx": 620,
+   "core": [
+    [
+     89.706,
+     25.572
+    ],
+    [
+     89.718,
+     25.57
+    ],
+    [
+     89.722,
+     25.58
+    ],
+    [
+     89.714,
+     25.586
+    ],
+    [
+     89.707,
+     25.582
+    ]
+   ],
+   "fringe": [
+    [
+     89.703,
+     25.569
+    ],
+    [
+     89.72,
+     25.567
+    ],
+    [
+     89.725,
+     25.58
+    ],
+    [
+     89.715,
+     25.589
+    ],
+    [
+     89.704,
+     25.583
+    ],
+    [
+     89.701,
+     25.576
+    ]
+   ],
+   "ghost": [
+    [
+     89.708,
+     25.574
+    ],
+    [
+     89.717,
+     25.573
+    ],
+    [
+     89.72,
+     25.58
+    ],
+    [
+     89.713,
+     25.584
+    ],
+    [
+     89.708,
+     25.58
+    ]
+   ],
+   "hhDb": [
+    -11.6,
+    -11.1,
+    -11.4,
+    -19.0,
+    -18.9,
+    -18.2,
+    -19.1,
+    -18.8,
+    -18.1
+   ],
+   "hvDb": [
+    -16.5,
+    -17.6,
+    -17.1,
+    -19.6,
+    -19.8,
+    -20.0,
+    -19.3,
+    -19.9,
+    -21.0
+   ],
+   "areaHa": 98.4,
+   "robustAreaHa": 73.6,
+   "provenance": "SIMULATED",
+   "status": "awaiting-observation"
+  },
+  {
+   "id": "CH-02",
+   "title": "South sandbar",
+   "question": "Is this bright patch new sand, or water that has dried?",
+   "centroid": [
+    89.688,
+    25.538
+   ],
+   "distanceKm": 3.1,
+   "robustPx": 960,
+   "fringePx": 480,
+   "core": [
+    [
+     89.681,
+     25.533
+    ],
+    [
+     89.693,
+     25.532
+    ],
+    [
+     89.696,
+     25.541
+    ],
+    [
+     89.686,
+     25.545
+    ],
+    [
+     89.68,
+     25.539
+    ]
+   ],
+   "fringe": [
+    [
+     89.678,
+     25.531
+    ],
+    [
+     89.695,
+     25.53
+    ],
+    [
+     89.699,
+     25.542
+    ],
+    [
+     89.687,
+     25.548
+    ],
+    [
+     89.678,
+     25.54
+    ]
+   ],
+   "ghost": [
+    [
+     89.683,
+     25.535
+    ],
+    [
+     89.692,
+     25.534
+    ],
+    [
+     89.694,
+     25.54
+    ],
+    [
+     89.685,
+     25.543
+    ],
+    [
+     89.682,
+     25.538
+    ]
+   ],
+   "hhDb": [
+    -20.3,
+    -20.3,
+    -20.3,
+    -20.1,
+    -20.1,
+    -14.6,
+    -13.7,
+    -15.0,
+    -15.0
+   ],
+   "hvDb": [
+    -23.9,
+    -23.6,
+    -24.1,
+    -24.3,
+    -23.9,
+    -21.5,
+    -21.4,
+    -21.8,
+    -21.2
+   ],
+   "areaHa": 57.6,
+   "robustAreaHa": 38.4,
+   "provenance": "SIMULATED",
+   "status": "awaiting-observation"
+  },
+  {
+   "id": "CH-03",
+   "title": "West bank wet land",
+   "question": "Wet land or flooded vegetation? L-band double-bounce can look bright.",
+   "centroid": [
+    89.652,
+    25.56
+   ],
+   "distanceKm": 4.0,
+   "robustPx": 1210,
+   "fringePx": 390,
+   "core": [
+    [
+     89.645,
+     25.555
+    ],
+    [
+     89.657,
+     25.554
+    ],
+    [
+     89.66,
+     25.562
+    ],
+    [
+     89.652,
+     25.567
+    ],
+    [
+     89.646,
+     25.562
+    ]
+   ],
+   "fringe": [
+    [
+     89.643,
+     25.553
+    ],
+    [
+     89.658,
+     25.552
+    ],
+    [
+     89.662,
+     25.563
+    ],
+    [
+     89.652,
+     25.569
+    ],
+    [
+     89.644,
+     25.562
+    ]
+   ],
+   "ghost": [
+    [
+     89.647,
+     25.557
+    ],
+    [
+     89.656,
+     25.556
+    ],
+    [
+     89.658,
+     25.562
+    ],
+    [
+     89.651,
+     25.565
+    ],
+    [
+     89.647,
+     25.56
+    ]
+   ],
+   "hhDb": [
+    -13.6,
+    -13.4,
+    -12.7,
+    -12.6,
+    -8.7,
+    -8.4,
+    -8.2,
+    -7.9,
+    -8.5
+   ],
+   "hvDb": [
+    -19.0,
+    -18.1,
+    -18.0,
+    -17.9,
+    -14.6,
+    -14.1,
+    -14.4,
+    -14.5,
+    -15.4
+   ],
+   "areaHa": 64.0,
+   "robustAreaHa": 48.4,
+   "provenance": "SIMULATED",
+   "status": "awaiting-observation"
+  }
+ ],
+ "sensorRace": {
+  "opticalClear": 5,
+  "opticalTotal": 49,
+  "nisarSeen": 9,
+  "nisarTotal": 9,
+  "s1Dates": 18
+ },
+ "placeWatch": {
+  "bn": "\u098f\u0987 \u099c\u09be\u09af\u09bc\u0997\u09be\u09af\u09bc \u09b8\u09cd\u09af\u09be\u099f\u09c7\u09b2\u09be\u0987\u099f\u09c7\u09b0 \u09b8\u0982\u0995\u09c7\u09a4 \u09aa\u09be\u09a8\u09bf\u09b0 \u0989\u09aa\u09b8\u09cd\u09a5\u09bf\u09a4\u09bf\u09b0 \u09b8\u0999\u09cd\u0997\u09c7 \u09b8\u09be\u09ae\u099e\u09cd\u099c\u09b8\u09cd\u09af\u09aa\u09c2\u09b0\u09cd\u09a3 \u2014 \u09a4\u09ac\u09c7 \u098f\u099f\u09bf \u09a8\u09bf\u09b6\u09cd\u099a\u09bf\u09a4 \u09aa\u09cd\u09b0\u09ae\u09be\u09a3 \u09a8\u09af\u09bc\u0964",
+  "en": "At this place, the satellite signal is consistent with water being present \u2014 it is not proof on its own."
+ },
+ "manifestHash": "sha256:e7131771c45603d959535adfc2109fc112626b510484a0c290b450f378c1ee8d",
+ "caseHash": "sha256:126ab3df86f6ab0fcd0f66bbc32aed9b6a7e582bd7a3c7d2e9d3f9d3ee6405e6"
+}
