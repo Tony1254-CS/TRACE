@@ -190,7 +190,7 @@
   "jrcGlobalSurfaceWater": "UNVERIFIED",
   "worldPopOsmExposure": "UNVERIFIED - OSM credit required under ODbL when used"
  },
- "manifestHash": "sha256:06de86d58fb6ccff53c9b85161f3685b55a8cafa1acaa4f3f6818c9e62c5c2ff",
+ "manifestHash": "cdeb9c626dc8987d",
  "method": "Browse-derived: ASF LATLON browse (HH/HV/HH composite, R==B verified, R~HHHH r=0.86, G~HVHV r=0.85), full-frame percentile harmonisation, ensemble of 12 settings (3 thresholds x 2 median windows x 2 MMU). Robust = change in all 12, fringe = change in some. Calibrated GCOV float processing is gated on an Earthdata login (h5 returns 401).",
  "browseGrid": {
   "stepDeg": 0.00045,
@@ -227,14 +227,13 @@
   "stageSource": "BWDB/FFWC Chilmari gauge has no public API found 2026-10-31; GloFAS discharge used as the hydrological driver, labelled as such."
  },
  "exposure": {
-  "source": "OpenStreetMap via Overpass API, 2026-10-31 (ODbL - credit OpenStreetMap contributors)",
   "buildingsWithin1km": {
-   "CH-01": 731,
-   "CH-02": 650,
-   "CH-03": 0
+   "CH-01": 830,
+   "CH-02": 1240,
+   "CH-03": 633
   },
   "namedSettlementsInAOI": 28,
-  "note": "Building counts are OSM-mapped features within 1 km of each candidate centroid; OSM completeness varies, so these are a floor, not a census. WorldPop grid not yet ingested."
+  "note": "OSM counts are a floor, not a census (mapping completeness varies). \u00a9 OpenStreetMap contributors, ODbL."
  },
  "crosscheck": {
   "sentinel1": "Sentinel-1 RTC (ASF) C-band VV gamma-0, relative orbit 114, 2026-07-13 -> 2026-10-05, Planetary Computer COGs",
@@ -242,20 +241,30 @@
   "jrc": "JRC Global Surface Water: public JEODPP MonthlyHistory mirror ends at 2021 - no 2026 monthly water openly downloadable there (checked 2026-10-31). S2 NDWI fills the optical role."
  },
  "exposureWorldPop": {
-  "source": "WorldPop bgd_ppp_2020.tif (people per ~100 m pixel, 2020, Global_2000_2020 release)",
+  "source": "WorldPop Bangladesh 2020 (Global_2000_2020)",
   "population": {
    "CH-01": {
-    "core": 1499,
-    "corePlusFringe": 2567
+    "core": 1835,
+    "corePlusFringe": 2190
    },
    "CH-02": {
-    "core": 1272,
-    "corePlusFringe": 2544
+    "core": 961,
+    "corePlusFringe": 1589
    },
    "CH-03": {
-    "core": 554,
-    "corePlusFringe": 1039
+    "core": 884,
+    "corePlusFringe": 1340
    }
   }
+ },
+ "methodV4": {
+  "pipeline": "calibrated GCOV gamma-0 (float .h5 via Earthdata), dB ensemble, native 20 m grid",
+  "controlPatchShiftDb": {
+   "julDb": -11.41,
+   "octDb": -9.17,
+   "shiftDb": 2.25
+  },
+  "retired": "Browse-era candidates retired 2026-10-31: old CH-01 calibrated dHH +0.74 dB and old CH-03 -0.86 dB (no real NISAR change; browse-render artefacts). Old CH-02 region confirmed and refined (raw dHH +4.6 dB area mean; robust cores +12..+14 dB).",
+  "ghosts": "Ghost outline = July open-water extent (calibrated HH < -20 dB) inside each candidate fringe."
  }
 }

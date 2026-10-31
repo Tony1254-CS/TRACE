@@ -1,41 +1,41 @@
 {
  "sentinel1": {
   "CH-01": {
-   "vvDb_a": -6.92,
-   "darkFrac_a": 0.012,
+   "vvDb_a": -15.75,
+   "darkFrac_a": 0.421,
    "date_a": "2026-07-13",
-   "vvDb_b": -8.49,
-   "darkFrac_b": 0.002,
+   "vvDb_b": -10.02,
+   "darkFrac_b": 0.001,
    "date_b": "2026-10-05",
    "s1Agrees": false,
-   "s1DarkChange": -0.01
+   "s1DarkChange": -0.42
   },
   "CH-02": {
-   "vvDb_a": -10.03,
-   "darkFrac_a": 0.066,
+   "vvDb_a": -11.65,
+   "darkFrac_a": 0.091,
    "date_a": "2026-07-13",
-   "vvDb_b": -9.6,
-   "darkFrac_b": 0.021,
-   "date_b": "2026-10-05",
-   "s1Agrees": true,
-   "s1DarkChange": -0.045
-  },
-  "CH-03": {
-   "vvDb_a": -14.78,
-   "darkFrac_a": 0.482,
-   "date_a": "2026-07-13",
-   "vvDb_b": -14.49,
-   "darkFrac_b": 0.387,
+   "vvDb_b": -11.24,
+   "darkFrac_b": 0.005,
    "date_b": "2026-10-05",
    "s1Agrees": false,
-   "s1DarkChange": -0.095
+   "s1DarkChange": -0.086
+  },
+  "CH-03": {
+   "vvDb_a": -13.78,
+   "darkFrac_a": 0.187,
+   "date_a": "2026-07-13",
+   "vvDb_b": -11.28,
+   "darkFrac_b": 0.004,
+   "date_b": "2026-10-05",
+   "s1Agrees": false,
+   "s1DarkChange": -0.183
   }
  },
  "sentinel2": {
   "CH-01": {
-   "ndwiWaterFrac_jul": 0.129,
+   "ndwiWaterFrac_jul": 0.0,
    "date_jul": "2026-07-04",
-   "ndwiWaterFrac_oct": 0.005,
+   "ndwiWaterFrac_oct": 0.0,
    "date_oct": "2026-10-12"
   },
   "CH-02": {
@@ -45,9 +45,9 @@
    "date_oct": "2026-10-12"
   },
   "CH-03": {
-   "ndwiWaterFrac_jul": 0.284,
+   "ndwiWaterFrac_jul": 0.0,
    "date_jul": "2026-07-04",
-   "ndwiWaterFrac_oct": 0.433,
+   "ndwiWaterFrac_oct": 0.0,
    "date_oct": "2026-10-12"
   }
  }

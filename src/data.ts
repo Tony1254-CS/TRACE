@@ -26,6 +26,7 @@ export interface Candidate {
   hhIntensity: number[]; hvIntensity: (number | null)[];
   meanDelta: number; direction: string; provenance: string; status: string;
   crosscheck?: Crosscheck;
+  calibrated?: { hhDbA: number; hhDbB: number; hvDbA: number; hvDbB: number; dDbHH: number; dDbHV: number | null };
 }
 export interface Drivers {
   dischargeM3sByDate: Record<string, number>; dischargeSource: string;
@@ -37,7 +38,7 @@ export interface CaseData {
   candidates: Candidate[]; drivers: Drivers;
   sensorRace: { opticalClear: number; opticalTotal: number; nisarSeen: number; nisarTotal: number; s1Dates: number };
   placeWatch: { bn: string; en: string };
-  walkGrid: { date: string; layer: string; values: number[][] };
+  walkGrid: { date: string; layer: string; unit?: string; values: (number | null)[][] };
   manifestHash: string; caseHash: string;
 }
 

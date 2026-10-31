@@ -312,6 +312,9 @@ function CaseMap({ caseData, manifest, sel, onSelect, onPassport, onVerify }: {
       <div className="rowline"><span className="dim">HH intensity (browse, 0–255)</span><span className="mono amber">{hh}</span></div>
       <div className="rowline"><span className="dim">HV intensity (browse, 0–255)</span><span className="mono teal">{hvRaw === null ? 'no HV render this date — see Passport QA' : hv}</span></div>
       <div className="rowline"><span className="dim">Jamuna discharge (GloFAS)</span><span className="mono">{caseData.drivers.dischargeM3sByDate[caseData.dates[dateIdx]]} m³/s</span></div>
+      {sel.calibrated && (caseData.dates[dateIdx] === caseData.pair[0] || caseData.dates[dateIdx] === caseData.pair[1]) && (
+        <div className="rowline"><span className="dim">HH gamma-0, calibrated (core mean)</span><span className="mono amber">{caseData.dates[dateIdx] === caseData.pair[0] ? sel.calibrated.hhDbA : sel.calibrated.hhDbB} dB · pair change {sel.calibrated.dDbHH > 0 ? '+' : ''}{sel.calibrated.dDbHH} dB</span></div>
+      )}
       {sel.crosscheck && <div className="dim" style={{ fontSize: 12.5, lineHeight: 1.5 }}><span className="mono teal" style={{ fontSize: 11 }}>CROSSCHECK — </span>{sel.crosscheck.reading}</div>}
       <PlainWords caseData={caseData} sel={sel} />
       <div className="rowline"><span className="dim">Granule grid</span><span className="mono">{granule.gridM} m native GCOV · browse grid for polygons</span></div>
@@ -577,11 +580,12 @@ function WalkRadar({ caseData }: { caseData: CaseData }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [val, setVal] = useState<number | null>(null);
   const audioRef = useRef<{ ctx: AudioContext; osc: OscillatorNode } | null>(null);
+  const isDb = caseData.walkGrid.unit === 'dB';
   const grid = useMemo(() => {
-    // REAL field: NISAR HH browse intensity over the case AOI, latest date,
-    // computed by precompute.py from the actual granule — not a simulation.
-    const values = caseData.walkGrid.values;
-    return { N: values.length, cells: values.flat() };
+    // REAL field: NISAR HH over the case AOI, latest date. v4: calibrated
+    // gamma-0 in dB from the GCOV float product — not a simulation.
+    const values = caseData.walkGrid.values.map((row) => row.map((v) => v ?? -28));
+    return { N: values.length, cells: values.flat() as number[] };
   }, [caseData]);
   const [gpsOn, setGpsOn] = useState(false);
   const [posPx, setPosPx] = useState<{ x: number; y: number } | null>(null);
@@ -590,8 +594,10 @@ function WalkRadar({ caseData }: { caseData: CaseData }) {
     const cv = canvasRef.current; if (!cv) return;
     const g = cv.getContext('2d')!; const { N, cells } = grid; const s = cv.width / N;
     for (let i = 0; i < cells.length; i++) {
-      const v = cells[i]; const t = Math.max(0, Math.min(1, v / 255));
-      g.fillStyle = v < 45 ? '#12484d' : `rgb(${Math.round(30 + t * 225)},${Math.round(40 + t * 140)},${Math.round(45 + t * 40)})`;
+      const v = cells[i];
+      const t = isDb ? Math.max(0, Math.min(1, (v + 28) / 26)) : Math.max(0, Math.min(1, v / 255));
+      const dark = isDb ? v < -19 : v < 45;
+      g.fillStyle = dark ? '#12484d' : `rgb(${Math.round(30 + t * 225)},${Math.round(40 + t * 140)},${Math.round(45 + t * 40)})`;
       g.fillRect((i % N) * s, Math.floor(i / N) * s, s + 1, s + 1);
     }
     if (posPx) {
@@ -631,24 +637,26 @@ function WalkRadar({ caseData }: { caseData: CaseData }) {
           gain.gain.value = 0.04; osc.connect(gain); gain.connect(ctx.destination); osc.start();
           audioRef.current = { ctx, osc };
         }
-        audioRef.current.osc.frequency.value = 110 + (v / 255) * 660;
+        audioRef.current.osc.frequency.value = 110 + (isDb ? Math.max(0, Math.min(1, (v + 28) / 26)) : v / 255) * 660;
       } catch { /* audio is an encoding aid, not required */ }
     }
   }
-  const cls = val === null ? '' : val < 45 ? 'consistent with smooth open water (dark — specular reflection)' : val > 120 ? 'consistent with rough or vegetated land (bright)' : 'in between — wet land or sand, the contested zone';
+  const cls = val === null ? '' : isDb
+    ? (val < -19 ? 'consistent with smooth open water (dark — specular reflection)' : val > -10 ? 'consistent with rough or vegetated land (bright)' : 'in between — wet land or sand, the contested zone')
+    : (val < 45 ? 'consistent with smooth open water (dark — specular reflection)' : val > 120 ? 'consistent with rough or vegetated land (bright)' : 'in between — wet land or sand, the contested zone');
   return (
     <>
       <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>WALK ON THE RADAR · <span className="chip teal">REAL NISAR HH · {caseData.walkGrid.date}</span></div>
       <h1 style={{ fontSize: 25, margin: '6px 0' }}>Drag a finger across the scene</h1>
       <div className="walk" onPointerMove={probe} onPointerDown={probe}>
         <canvas ref={canvasRef} width={480} height={480} />
-        <div className="dbread">{val === null ? 'HH —' : `HH ${Math.round(val)} / 255`}</div>
+        <div className="dbread">{val === null ? 'HH —' : isDb ? `gamma-0 HH ${val.toFixed(1)} dB` : `HH ${Math.round(val)} / 255`}</div>
       </div>
       <button className="btn ghost" onClick={() => setGpsOn(!gpsOn)}>{gpsOn ? 'GPS walk: on — you are the amber ring' : 'Walk it with GPS instead'}</button>
       {gpsOn && !posPx && <p className="dim" style={{ fontSize: 12.5 }}>GPS is on but you are outside the case area (the Jamuna reach around Chilmari) — the ring appears when you step inside it.</p>}
       <p className="dim" style={{ fontSize: 13 }}>
         {val !== null && <span className="mono" style={{ color: 'var(--bone)' }}>Under your finger: {cls}. </span>}
-        Pitch and vibration follow the real HH browse intensity under your finger — dark smooth water low, bright land high.
+        Pitch and vibration follow the real calibrated HH gamma-0 under your finger — dark smooth water low, bright land high.{isDb && val !== null ? ` Reading: ${val.toFixed(1)} dB.` : ''}
         Walk it with GPS on site, or drag from a chair. <em>An encoding of data, not a sound from space.</em>
       </p>
     </>
