@@ -12,8 +12,8 @@ function loadScenes(): Promise<Record<string, string>> {
   return scenesPromise;
 }
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'inbox', label: 'INBOX' }, { id: 'map', label: 'CASE' }, { id: 'verify', label: 'VERIFY' },
-  { id: 'radar', label: 'RADAR' }, { id: 'place', label: 'MY PLACE' },
+  { id: 'inbox', label: 'MISSION' }, { id: 'map', label: 'MAP' }, { id: 'verify', label: 'VERIFY' },
+  { id: 'radar', label: 'LAB' }, { id: 'place', label: 'MY PLACE' },
 ];
 
 function useTick(target: number, digits = 1) {
@@ -63,19 +63,26 @@ export default function App() {
   return (
     <>
       <header className="topbar">
-        <span className="brand">TRACE Field</span>
-        <span className="tag">THE SATELLITE ASKS. YOU ANSWER.</span>
+        <div>
+          <div className="brand">TRACE <em>Field</em></div>
+          <div className="tag">THE SATELLITE ASKS · YOU ANSWER</div>
+        </div>
+        <div className="livecase">
+          CASE <b>{caseData.caseId}</b><br />{caseData.site.name.toUpperCase()}
+          {queuedCount > 0 && <><br /><span className="queuepill">{queuedCount} TO SYNC</span></>}
+        </div>
       </header>
       <main>
         {tab === 'inbox' && <Inbox caseData={caseData} onOpen={(c) => { setSelected(c); setTab('map'); }} queuedCount={queuedCount} />}
         {tab === 'map' && <CaseMap caseData={caseData} manifest={manifest} sel={sel} onSelect={setSelected} onPassport={() => setPassport(true)} onVerify={() => setTab('verify')} />}
         {tab === 'verify' && <Verify caseData={caseData} sel={sel} onSelect={setSelected} />}
-        {tab === 'radar' && <WalkRadar caseData={caseData} />}
+        {tab === 'radar' && <><WalkRadar caseData={caseData} />{caseData.deltaGrid && <ThresholdLab caseData={caseData} />}</>}
         {tab === 'place' && <MyPlace caseData={caseData} sel={sel} />}
       </main>
       <nav className="tabbar">
-        {TABS.map((t) => (
+        {TABS.map((t, i) => (
           <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>
+            <span className="n">0{i + 1}</span>
             {t.label}{t.id === 'verify' && queuedCount > 0 ? ` · ${queuedCount}` : ''}
           </button>
         ))}
@@ -133,67 +140,88 @@ function Inbox({ caseData, onOpen, queuedCount }: { caseData: CaseData; onOpen: 
 
   return (
     <>
-      <div className="sweep">
-        <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>MISSION INBOX · TRACK 19 · FRAME 076</div>
-        <h1 style={{ fontSize: 26, margin: '8px 0 2px' }}>The satellite is unsure about {caseData.candidates.length} places near you</h1>
-        <div className="dim" style={{ fontSize: 13 }}>{caseData.site.name} — it never asks you to confirm what it already knows.</div>
+      <div className="hero sweep">
+        <div className="kick">MISSION INBOX · TRACK 19 · FRAME 076</div>
+        <h1>The satellite is <em>unsure</em> about {caseData.candidates.length} places near you.</h1>
+        <div className="sub">{caseData.site.name} — it never asks you to confirm what it already knows. Your eyes finish the measurement.</div>
+        <div className="strip">
+          <div><div className="k">NISAR PASSES</div><div className="v">{r.nisarTotal} <small>same track</small></div></div>
+          <div><div className="k">RIVER FELL</div><div className="v">{caseData.drivers.dischargeM3sByDate[caseData.pair[0]]}→{caseData.drivers.dischargeM3sByDate[caseData.pair[1]]} <small>m³/s</small></div></div>
+          <div><div className="k">NEXT PASS</div><div className="v">{nextPass(caseData.dates[caseData.dates.length - 1]).toISOString().slice(5, 10)}</div></div>
+        </div>
       </div>
 
-      {caseData.candidates.map((c) => (
-        <button key={c.id} className="card" onClick={() => onOpen(c)}>
-          <span className="chip amber">{c.id}</span>{' '}
-          <span className="chip sim">{c.provenance}</span>{' '}
-          <span className="chip">{c.status.replace('-', ' ').toUpperCase()}</span>
-          <div className="q">{c.question}</div>
-          <div className="mono dim" style={{ fontSize: 12 }}>{c.title} · {c.distanceKm} km away · robust core {c.robustAreaHa} ha</div>
-        </button>
-      ))}
+      <div className="sect">
+        <div className="sect-h"><span className="idx">01</span><span className="name">THE CASES</span><span className="rule" /><span className="meta">TAP TO OPEN THE MAP</span></div>
+        {caseData.candidates.map((c) => (
+          <button key={c.id} className="card" onClick={() => onOpen(c)}>
+            <div className="chead">
+              <span className="cid">{c.id}</span>
+              <span className="chip sim">{c.provenance}</span>
+              <span className="chip">{c.status.replace('-', ' ').toUpperCase()}</span>
+            </div>
+            <div className="q">{c.question}</div>
+            <div className="cfoot">
+              <div><div className="k">DISTANCE</div><div className="v">{c.distanceKm} km</div></div>
+              <div><div className="k">ROBUST CORE</div><div className="v">{c.robustAreaHa} ha</div></div>
+              <div><div className="k">Δ HH · CALIBRATED</div><div className="v">{c.calibrated ? `+${c.calibrated.dDbHH} dB` : '—'}</div></div>
+            </div>
+          </button>
+        ))}
+      </div>
 
-      <div className="card" style={{ cursor: 'default' }}>
+      <div className="sect">
+        <div className="sect-h"><span className="idx">02</span><span className="name">FIELD KIT</span><span className="rule" /></div>
         <div className="ringwrap">
-          <svg className="progress-ring" width="64" height="64">
-            <circle cx="32" cy="32" r="26" fill="none" stroke="#1F2A33" strokeWidth="5" />
-            <circle cx="32" cy="32" r="26" fill="none" stroke="#FFB224" strokeWidth="5"
-              strokeDasharray={circ} strokeDashoffset={dl < 0 ? circ : circ * (1 - dl / 100)} transform="rotate(-90 32 32)" />
+          <svg className="progress-ring" width="52" height="52">
+            <circle cx="26" cy="26" r="21" fill="none" stroke="#1F2A33" strokeWidth="4" />
+            <circle cx="26" cy="26" r="21" fill="none" stroke="#FFB224" strokeWidth="4"
+              strokeDasharray={2 * Math.PI * 21} strokeDashoffset={dl < 0 ? 2 * Math.PI * 21 : 2 * Math.PI * 21 * (1 - dl / 100)} transform="rotate(-90 26 26)" />
           </svg>
-          <div>
-            <div style={{ fontSize: 16 }}>Offline pack</div>
-            <div className="dim" style={{ fontSize: 13 }}>{dl < 0 ? 'Download this case — tiles and JSON — before you leave signal.' : dl < 100 ? `Caching… ${dl}%` : 'Cached. Airplane mode is fine now.'}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15 }}>Offline pack</div>
+            <div className="dim" style={{ fontSize: 12.5 }}>{dl < 0 ? 'Case, scenes, audio and map tiles — before you leave signal.' : dl < 100 ? `Caching… ${dl}%` : 'Cached. Airplane mode is fine now.'}</div>
           </div>
         </div>
-        <button className="btn ghost" onClick={downloadCase}>Download case</button>
-        {queuedCount > 0 && <button className="btn" onClick={() => syncAllQueued()}>Sync now ({queuedCount} queued)</button>}
-      </div>
-
-      <div className="card" style={{ cursor: 'default' }}>
-        <div className="mono" style={{ fontSize: 12 }}>
-          SENSOR RACE — Optical had a clear view on <span className="amber">{r.opticalClear} of {r.opticalTotal}</span> dates.
-          L-band saw all <span className="teal">{r.nisarSeen} of {r.nisarTotal}</span> of its passes. C-band context: {r.s1Dates} dates.
+        <div className="btnrow" style={{ marginTop: 12 }}>
+          <button className="btn ghost" onClick={downloadCase}>Download case</button>
+          {queuedCount > 0 && <button className="btn" onClick={() => syncAllQueued()}>Sync now · {queuedCount}</button>}
         </div>
       </div>
 
-      <div className="card" style={{ cursor: 'default' }}>
-        <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>DRIVERS — WHY THE RIVER MOVED</div>
-        <div className="rowline"><span>Jamuna discharge {caseData.pair[0]}</span><span className="mono">{caseData.drivers.dischargeM3sByDate[caseData.pair[0]]} m³/s</span></div>
-        <div className="rowline"><span>Jamuna discharge {caseData.pair[1]}</span><span className="mono">{caseData.drivers.dischargeM3sByDate[caseData.pair[1]]} m³/s</span></div>
-        <div className="rowline"><span>Rain over the pair window</span><span className="mono">{caseData.drivers.rainPairTotalMm} mm</span></div>
-        <div className="dim" style={{ fontSize: 12 }}>Discharge: GloFAS via Open-Meteo Flood API. Rain: NASA POWER. The BWDB/FFWC Chilmari gauge has no public API — discharge stands in for stage, and says so.</div>
+      <div className="sect">
+        <div className="sect-h"><span className="idx">03</span><span className="name">WHY THE RIVER MOVED</span><span className="rule" /></div>
+        <div className="ledger">
+          <div className="rowline"><span className="lab">Discharge · {caseData.pair[0]}</span><span className="val">{caseData.drivers.dischargeM3sByDate[caseData.pair[0]].toLocaleString()} m³/s</span></div>
+          <div className="rowline"><span className="lab">Discharge · {caseData.pair[1]}</span><span className="val">{caseData.drivers.dischargeM3sByDate[caseData.pair[1]].toLocaleString()} m³/s</span></div>
+          <div className="rowline"><span className="lab">Rain over the pair window</span><span className="val">{caseData.drivers.rainPairTotalMm} mm</span></div>
+          <div className="rowline"><span className="lab">Optical clear views</span><span className="val">{r.opticalClear} of {r.opticalTotal} dates</span></div>
+          <div className="rowline"><span className="lab">L-band passes seen</span><span className="val">{r.nisarSeen} of {r.nisarTotal}</span></div>
+        </div>
+        <div className="dim" style={{ fontSize: 12, marginTop: 8, lineHeight: 1.55 }}>Discharge: GloFAS via Open-Meteo Flood API. Rain: NASA POWER. The FFWC Chilmari gauge has no public API — discharge stands in for stage, and says so.</div>
       </div>
 
-      <div className="card" style={{ cursor: 'default' }}>
-        <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>MISSION REPLAY — HOW THIS INVESTIGATION UNFOLDED</div>
-        {replay.map((e, i) => (
-          <div key={i} className="rowline"><span className="mono dim">{e.t}</span><span style={{ fontSize: 13, color: e.kind === 'evidence' ? 'var(--amber)' : undefined }}>{e.label}</span></div>
-        ))}
+      <div className="sect">
+        <div className="sect-h"><span className="idx">04</span><span className="name">MISSION REPLAY</span><span className="rule" /><span className="meta">{replay.length} EVENTS</span></div>
+        <details className="acc">
+          <summary><span className="t">How this investigation unfolded</span><span className="plus">+</span></summary>
+          <div className="body">
+            {replay.map((e, i) => (
+              <div key={i} className="rowline"><span className="mono dim" style={{ fontSize: 12 }}>{e.t}</span><span style={{ fontSize: 13, color: e.kind === 'evidence' ? 'var(--amber)' : 'var(--bone)' }}>{e.label}</span></div>
+            ))}
+          </div>
+        </details>
       </div>
 
-      <div className="card" style={{ cursor: 'default' }}>
-        <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>WEB REVIEW — EVIDENCE RETURN</div>
-        <div className="verdict" style={{ fontSize: 22, margin: '6px 0' }}>{awaiting} observation{awaiting === 1 ? '' : 's'} awaiting review</div>
-        {inbox.map((row, i) => (
-          <div key={i} className="rowline"><span>{row.candidateId} — {row.answer}</span><span className="mono dim">{row.observerTag}</span></div>
-        ))}
-        {awaiting === 0 && <div className="dim" style={{ fontSize: 13 }}>Submit from Verify and watch this card change. Conflicting answers are kept as separate rows — never merged, never called verified.</div>}
+      <div className="sect">
+        <div className="sect-h"><span className="idx">05</span><span className="name">EVIDENCE RETURN</span><span className="rule" /></div>
+        <div className="verdict-n">{awaiting} observation{awaiting === 1 ? '' : 's'} awaiting review</div>
+        <div className="ledger" style={{ marginTop: 8 }}>
+          {inbox.map((row, i) => (
+            <div key={i} className="rowline"><span>{row.candidateId} — {row.answer}{row.relation ? ` · ${row.relation}` : ''}</span><span className="mono dim" style={{ fontSize: 11 }}>{row.observerTag}</span></div>
+          ))}
+        </div>
+        {awaiting === 0 && <div className="dim" style={{ fontSize: 13, marginTop: 8, lineHeight: 1.55 }}>Submit from Verify and watch this list change. Conflicting answers are kept as separate rows — never merged, never called verified.</div>}
       </div>
     </>
   );
@@ -210,7 +238,7 @@ function PlainWords({ caseData, sel }: { caseData: CaseData; sel: Candidate }) {
     <div style={{ marginTop: 6 }}>
       <button className="chip" style={{ minHeight: 40, cursor: 'pointer', color: open ? '#FFB224' : undefined }} onClick={() => setOpen(!open)}>PLAIN WORDS · সহজ ভাষায়</button>
       {open && (
-        <div className="guide-card" style={{ marginTop: 8 }}>
+        <div style={{ marginTop: 10, border: "1px solid var(--hair)", background: "var(--panel2)", padding: 16 }}>
           <div style={{ fontSize: 14.5, lineHeight: 1.55 }}>
             Satellite observations indicate a candidate surface transition at {sel.title.toLowerCase()}. The mapped area is {sel.areaHa} hectares ({sel.robustAreaHa} hectares of it robust across every tested setting). Between {caseData.pair[0]} and {caseData.pair[1]} this ground {dirEn}. River discharge fell from {d0} to {d1} cubic metres per second over the same window. River-stage differences and classification uncertainty affect how confidently this can be read as erosion — which is why a person on the ground is being asked.
           </div>
@@ -307,35 +335,48 @@ function CaseMap({ caseData, manifest, sel, onSelect, onPassport, onVerify }: {
   const granule = manifest.granules[dateIdx];
   return (
     <>
-      <div ref={mapRef} className="mapbox" />
-      <div className="mono dim" style={{ fontSize: 11, marginTop: 6 }}>
-        Solid = robust core · amber hatch = contested fringe · dashed = earlier boundary. Underneath: the actual NISAR HH scene for the selected date. Basemap © OSM (ODbL).
+      <div className="mapwrap">
+        <div ref={mapRef} className="mapbox" />
+        <div className="mapctl">
+          <button className="chip" style={{ color: sceneOn ? '#FFB224' : '#8A94A0', borderColor: sceneOn ? '#FFB224' : '#2A3641' }} onClick={() => setSceneOn(!sceneOn)}>
+            NISAR SCENE {sceneOn ? 'ON' : 'OFF'}
+          </button>
+        </div>
+        <div className="maplegend">
+          <span className="amber">■</span> ROBUST CORE&nbsp;&nbsp;<span style={{ color: '#C77F1A' }}>▨</span> FRINGE&nbsp;&nbsp;<span>┄</span> JULY WATER
+        </div>
       </div>
-      <button className="chip" style={{ minHeight: 40, cursor: 'pointer', color: sceneOn ? '#FFB224' : undefined }} onClick={() => setSceneOn(!sceneOn)}>
-        {sceneOn ? 'NISAR SCENE: ON' : 'NISAR SCENE: OFF'}
-      </button>
-      <div className="scrub">
-        {caseData.dates.map((d, i) => (
-          <button key={d} className={i === dateIdx ? 'active' : ''} onClick={() => setDateIdx(i)}>{d.slice(5)}</button>
-        ))}
-      </div>
-      <div className="rowline"><span>{sel.id} · {sel.title}</span><span className="mono">{caseData.dates[dateIdx]}</span></div>
-      <div className="rowline"><span className="dim">HH intensity (browse, 0–255)</span><span className="mono amber">{hh}</span></div>
-      <div className="rowline"><span className="dim">HV intensity (browse, 0–255)</span><span className="mono teal">{hvRaw === null ? 'no HV render this date — see Passport QA' : hv}</span></div>
-      <div className="rowline"><span className="dim">Jamuna discharge (GloFAS)</span><span className="mono">{caseData.drivers.dischargeM3sByDate[caseData.dates[dateIdx]]} m³/s</span></div>
-      {sel.calibrated && (caseData.dates[dateIdx] === caseData.pair[0] || caseData.dates[dateIdx] === caseData.pair[1]) && (
-        <div className="rowline"><span className="dim">HH gamma-0, calibrated (core mean)</span><span className="mono amber">{caseData.dates[dateIdx] === caseData.pair[0] ? sel.calibrated.hhDbA : sel.calibrated.hhDbB} dB · pair change {sel.calibrated.dDbHH > 0 ? '+' : ''}{sel.calibrated.dDbHH} dB</span></div>
-      )}
-      {sel.crosscheck && <div className="dim" style={{ fontSize: 12.5, lineHeight: 1.5 }}><span className="mono teal" style={{ fontSize: 11 }}>CROSSCHECK — </span>{sel.crosscheck.reading}</div>}
-      <PlainWords caseData={caseData} sel={sel} />
-      <div className="rowline"><span className="dim">Granule grid</span><span className="mono">{granule.gridM} m native GCOV · browse grid for polygons</span></div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+
+      <div className="seg">
         {caseData.candidates.map((c) => (
-          <button key={c.id} className="chip" style={{ minHeight: 44, cursor: 'pointer', color: c.id === sel.id ? '#FFB224' : undefined }} onClick={() => onSelect(c)}>{c.id}</button>
+          <button key={c.id} className={c.id === sel.id ? 'active' : ''} onClick={() => onSelect(c)}>{c.id}</button>
         ))}
       </div>
-      <button className="btn ghost" onClick={onPassport}>Change Passport — where this number came from</button>
-      <button className="btn" onClick={onVerify}>Answer this case</button>
+
+      <div className="sect" style={{ marginTop: 22 }}>
+        <div className="sect-h"><span className="idx">◆</span><span className="name">{sel.id} — {sel.title.toUpperCase()}</span><span className="rule" /><span className="meta">{caseData.dates[dateIdx]}</span></div>
+        <div className="verdict-n">{sel.question}</div>
+        <div className="scrub">
+          {caseData.dates.map((d, i) => (
+            <button key={d} className={i === dateIdx ? 'active' : ''} onClick={() => setDateIdx(i)}>{d.slice(5)}</button>
+          ))}
+        </div>
+        <div className="dim" style={{ fontSize: 11.5, marginTop: 8 }}>Granule grid {granule.gridM} m native GCOV. Basemap © OSM (ODbL). Polygons and scenes load from case data — nothing is drawn by hand.</div>
+        <div className="ledger" style={{ marginTop: 10 }}>
+          <div className="rowline"><span className="lab">HH intensity (browse)</span><span className="val">{hh} / 255</span></div>
+          <div className="rowline"><span className="lab">HV intensity (browse)</span><span className="val">{hvRaw === null ? 'NO HV RENDER — SEE PASSPORT QA' : `${hv} / 255`}</span></div>
+          <div className="rowline"><span className="lab">Discharge (GloFAS)</span><span className="val">{caseData.drivers.dischargeM3sByDate[caseData.dates[dateIdx]].toLocaleString()} m³/s</span></div>
+          {sel.calibrated && (caseData.dates[dateIdx] === caseData.pair[0] || caseData.dates[dateIdx] === caseData.pair[1]) && (
+            <div className="rowline"><span className="lab">HH gamma-0 · calibrated</span><span className="val amber">{caseData.dates[dateIdx] === caseData.pair[0] ? sel.calibrated.hhDbA : sel.calibrated.hhDbB} dB · pair {sel.calibrated.dDbHH > 0 ? '+' : ''}{sel.calibrated.dDbHH} dB</span></div>
+          )}
+        </div>
+        {sel.crosscheck && <div className="reading"><span className="rk">CROSSCHECK — INDEPENDENT SENSORS</span>{sel.crosscheck.reading}</div>}
+        <PlainWords caseData={caseData} sel={sel} />
+        <div className="actionbar">
+          <button className="btn" onClick={onVerify}>Answer this case</button>
+          <button className="btn ghost" onClick={onPassport}>Change Passport — provenance</button>
+        </div>
+      </div>
     </>
   );
 }
@@ -479,7 +520,7 @@ function PointProve({ sel }: { sel: Candidate }) {
   return (
     <div style={{ marginBottom: 14 }}>
       <div className="mono" style={{ fontSize: 11, letterSpacing: 1.5 }}>POINT &amp; PROVE · {sel.id}</div>
-      <div style={{ position: 'relative', marginTop: 8, borderRadius: 8, overflow: 'hidden', background: '#000', minHeight: camOn ? undefined : 0 }}>
+      <div style={{ position: 'relative', marginTop: 8, overflow: 'hidden', background: '#000', border: '1px solid var(--hair)', minHeight: camOn ? undefined : 0 }}>
         <video ref={videoRef} playsInline muted style={{ width: '100%', display: camOn ? 'block' : 'none' }} />
         {camOn && (
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
@@ -520,6 +561,7 @@ const ANSWERS: { id: ObsAnswer; label: string }[] = [
 ];
 function Verify({ caseData, sel, onSelect }: { caseData: CaseData; sel: Candidate; onSelect: (c: Candidate) => void }) {
   const [answer, setAnswer] = useState<ObsAnswer | null>(null);
+  const [relation, setRelation] = useState<'supports' | 'contradicts' | 'inconclusive' | null>(null);
   const [note, setNote] = useState('');
   const [pos, setPos] = useState<{ lat: number; lon: number; acc: number } | null>(null);
   const [photo, setPhoto] = useState<Blob | undefined>();
@@ -550,7 +592,7 @@ function Verify({ caseData, sel, onSelect }: { caseData: CaseData; sel: Candidat
     if (!answer) return;
     const distKm = pos ? haversineKm(pos.lat, pos.lon, sel.centroid[1], sel.centroid[0]) : Infinity;
     const obs: Observation = {
-      caseCandidateId: sel.id, answer, note,
+      caseCandidateId: sel.id, answer, note, relation: relation ?? undefined,
       lat: pos?.lat ?? null, lon: pos?.lon ?? null, accuracyM: pos?.acc ?? null,
       takenAt: new Date().toISOString(), photo, voice, status: 'queued',
       observerTag: distKm <= 25 ? 'Field observer' : 'Demo observer, not at case site',
@@ -558,7 +600,7 @@ function Verify({ caseData, sel, onSelect }: { caseData: CaseData; sel: Candidat
     await db.observations.add(obs);
     if (navigator.onLine) { try { await syncAllQueued(); } catch { /* remains queued */ } }
     if ('vibrate' in navigator) navigator.vibrate(30);
-    setAnswer(null); setNote(''); setPhoto(undefined); setVoice(undefined); refresh();
+    setAnswer(null); setRelation(null); setNote(''); setPhoto(undefined); setVoice(undefined); refresh();
   }
 
   const dist = pos ? haversineKm(pos.lat, pos.lon, sel.centroid[1], sel.centroid[0]) : null;
@@ -566,39 +608,68 @@ function Verify({ caseData, sel, onSelect }: { caseData: CaseData; sel: Candidat
 
   return (
     <>
-      <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>VERIFY · {sel.id}</div>
-      <h1 style={{ fontSize: 25, margin: '6px 0' }}>{sel.question}</h1>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+      <div className="seg">
         {caseData.candidates.map((c) => (
-          <button key={c.id} className="chip" style={{ minHeight: 44, cursor: 'pointer', color: c.id === sel.id ? '#FFB224' : undefined }} onClick={() => onSelect(c)}>{c.id}</button>
+          <button key={c.id} className={c.id === sel.id ? 'active' : ''} onClick={() => onSelect(c)}>{c.id}</button>
         ))}
       </div>
-      <div className="choices">
-        {ANSWERS.map((a) => (
-          <button key={a.id} className={answer === a.id ? 'active' : ''} onClick={() => setAnswer(a.id)}>{a.label}</button>
-        ))}
+
+      <div className="sect" style={{ marginTop: 24 }}>
+        <div className="sect-h"><span className="idx">◆</span><span className="name">THE QUESTION — {sel.id}</span><span className="rule" /></div>
+        <div className="verdict-n">{sel.question}</div>
+
+        <div className="sect-h" style={{ marginTop: 26 }}><span className="idx">A</span><span className="name">WHAT DO YOU SEE?</span><span className="rule" /></div>
+        <div className="choices">
+          {ANSWERS.map((a) => (
+            <button key={a.id} className={answer === a.id ? 'active' : ''} onClick={() => setAnswer(a.id)}>
+              <span className="box" />{a.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="sect-h" style={{ marginTop: 26 }}><span className="idx">B</span><span className="name">VS THE SATELLITE READING</span><span className="rule" /></div>
+        <div className="choices">
+          {([['supports', 'Supports it — the ground agrees'], ['contradicts', 'Contradicts it — the ground disagrees'], ['inconclusive', 'Inconclusive — cannot tell']] as const).map(([id, lab]) => (
+            <button key={id} className={relation === id ? 'active' : ''} onClick={() => setRelation(id)}>
+              <span className="box" />{lab}
+            </button>
+          ))}
+        </div>
+
+        <div className="sect-h" style={{ marginTop: 26 }}><span className="idx">C</span><span className="name">EVIDENCE</span><span className="rule" /></div>
+        <div className="capture">
+          <button className={pos ? 'on' : ''} onClick={getGps}>{pos ? 'GPS ✓' : 'GPS FIX'}</button>
+          <label className={photo ? 'on' : ''} style={{ flex: 1, minHeight: 58, background: 'var(--panel)', border: `1px solid ${photo ? 'var(--teal)' : 'var(--hair)'}`, color: photo ? 'var(--teal)' : 'var(--bone)', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            {photo ? 'PHOTO ✓' : 'PHOTO'}
+            <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => setPhoto(e.target.files?.[0])} />
+          </label>
+          <button className={voice || rec ? 'on' : ''} onClick={toggleVoice}>{rec ? 'STOP ●' : voice ? 'VOICE ✓' : 'VOICE'}</button>
+        </div>
+        {pos && <div className="acc-ring" style={{ marginTop: 10 }}>
+          {pos.lat.toFixed(5)}, {pos.lon.toFixed(5)} · ±{pos.acc} m
+          {dist !== null && <> · Point &amp; Prove (approximate): {dist.toFixed(1)} km to the polygon, bearing {brg}°</>}
+        </div>}
+        <PointProve sel={sel} />
+        <textarea rows={3} placeholder="Note — what did you actually see?" value={note} onChange={(e) => setNote(e.target.value)} />
+        <div className="dim" style={{ fontSize: 12, lineHeight: 1.55, marginTop: 10 }}>Your photo is evidence for review, not ground truth. Submissions are never labelled "verified".</div>
       </div>
-      <button className="btn ghost" onClick={getGps}>Get GPS fix</button>
-      {pos && <div className="acc-ring" style={{ marginTop: 8 }}>
-        {pos.lat.toFixed(5)}, {pos.lon.toFixed(5)} · accuracy ±{pos.acc} m
-        {dist !== null && <> · Point &amp; Prove (approximate): {dist.toFixed(1)} km to the polygon, bearing {brg}°</>}
-      </div>}
-      <label className="btn ghost" style={{ textAlign: 'center' }}>
-        {photo ? 'Photo attached ✓' : 'Take / attach photo'}
-        <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => setPhoto(e.target.files?.[0])} />
-      </label>
-      <button className="btn ghost" onClick={toggleVoice}>{rec ? 'Stop voice note' : voice ? 'Voice note attached ✓' : 'Add voice note (optional)'}</button>
-      <textarea rows={3} placeholder="Note — what did you actually see?" value={note} onChange={(e) => setNote(e.target.value)} style={{ marginTop: 10 }} />
-      <button className="btn" disabled={!answer} onClick={submit}>Submit evidence</button>
-      {mine.length > 0 && <button className="btn ghost" onClick={() => exportStory(caseData, mine)}>Export field story (.md) — evidence so far</button>}
-      <p className="dim" style={{ fontSize: 12 }}>Your photo is evidence for review, not ground truth. Submissions are never labelled “verified”.</p>
-      {mine.length > 0 && <>
-        <div className="mono" style={{ fontSize: 11, letterSpacing: 1.5, marginTop: 14 }}>YOUR QUEUE</div>
-        {mine.map((o) => (
-          <div key={o.id} className="rowline"><span>{o.caseCandidateId} — {o.answer}{o.relation ? ` · ${o.relation}` : ''}</span><span className="chip">{o.status.replace('-', ' ').toUpperCase()}</span></div>
-        ))}
-        <button className="btn ghost" onClick={() => syncAllQueued().then(refresh)}>Sync now</button>
-      </>}
+
+      <div className="actionbar">
+        <button className="btn" disabled={!answer} onClick={submit}>Submit evidence</button>
+        {mine.length > 0 && <button className="btn ghost" onClick={() => exportStory(caseData, mine)}>Export field story (.md)</button>}
+      </div>
+
+      {mine.length > 0 && (
+        <div className="sect">
+          <div className="sect-h"><span className="idx">◆</span><span className="name">YOUR QUEUE</span><span className="rule" /><span className="meta">{mine.length} RECENT</span></div>
+          <div className="ledger">
+            {mine.map((o) => (
+              <div key={o.id} className="rowline"><span>{o.caseCandidateId} — {o.answer}{o.relation ? ` · ${o.relation}` : ''}</span><span className="chip">{o.status.replace('-', ' ').toUpperCase()}</span></div>
+            ))}
+          </div>
+          <button className="btn ghost" onClick={() => syncAllQueued().then(refresh)}>Sync now</button>
+        </div>
+      )}
     </>
   );
 }
@@ -674,19 +745,23 @@ function WalkRadar({ caseData }: { caseData: CaseData }) {
     : (val < 45 ? 'consistent with smooth open water (dark — specular reflection)' : val > 120 ? 'consistent with rough or vegetated land (bright)' : 'in between — wet land or sand, the contested zone');
   return (
     <>
-      <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>WALK ON THE RADAR · <span className="chip teal">REAL NISAR HH · {caseData.walkGrid.date}</span></div>
-      <h1 style={{ fontSize: 25, margin: '6px 0' }}>Drag a finger across the scene</h1>
-      <div className="walk" onPointerMove={probe} onPointerDown={probe}>
-        <canvas ref={canvasRef} width={480} height={480} />
-        <div className="dbread">{val === null ? 'HH —' : isDb ? `gamma-0 HH ${val.toFixed(1)} dB` : `HH ${Math.round(val)} / 255`}</div>
+      <div className="hero" style={{ paddingBottom: 0 }}>
+        <div className="kick">FIELD LAB · REAL NISAR HH · {caseData.walkGrid.date}</div>
+        <h1 style={{ fontSize: 27 }}>Walk on the <em>radar.</em></h1>
+        <div className="sub">Drag a finger across the scene. Pitch and vibration follow the real calibrated gamma-0 under your finger — dark smooth water low, bright rough land high.</div>
       </div>
-      <button className="btn ghost" onClick={() => setGpsOn(!gpsOn)}>{gpsOn ? 'GPS walk: on — you are the amber ring' : 'Walk it with GPS instead'}</button>
-      {gpsOn && !posPx && <p className="dim" style={{ fontSize: 12.5 }}>GPS is on but you are outside the case area (the Jamuna reach around Chilmari) — the ring appears when you step inside it.</p>}
-      <p className="dim" style={{ fontSize: 13 }}>
-        {val !== null && <span className="mono" style={{ color: 'var(--bone)' }}>Under your finger: {cls}. </span>}
-        Pitch and vibration follow the real calibrated HH gamma-0 under your finger — dark smooth water low, bright land high.{isDb && val !== null ? ` Reading: ${val.toFixed(1)} dB.` : ''}
-        Walk it with GPS on site, or drag from a chair. <em>An encoding of data, not a sound from space.</em>
-      </p>
+      <div className="sect">
+        <div className="walk" onPointerMove={probe} onPointerDown={probe}>
+          <canvas ref={canvasRef} width={480} height={480} />
+          <div className="dbread">{val === null ? 'γ0 HH —' : isDb ? `γ0 HH ${val.toFixed(1)} dB` : `HH ${Math.round(val)} / 255`}</div>
+        </div>
+        <div className="ledger">
+          <div className="rowline"><span className="lab">Under your finger</span><span className="val" style={{ whiteSpace: 'normal' }}>{val === null ? 'touch the scene' : cls}</span></div>
+        </div>
+        <button className="btn ghost" onClick={() => setGpsOn(!gpsOn)}>{gpsOn ? 'GPS walk on — you are the amber ring' : 'Walk it with GPS instead'}</button>
+        {gpsOn && !posPx && <p className="dim" style={{ fontSize: 12.5, lineHeight: 1.55 }}>GPS is on but you are outside the case area (the Jamuna reach around Chilmari) — the ring appears when you step inside it.</p>}
+        <p className="dim" style={{ fontSize: 12.5, lineHeight: 1.55 }}><em>An encoding of data, not a sound from space.</em></p>
+      </div>
     </>
   );
 }
@@ -714,17 +789,18 @@ function ThresholdLab({ caseData }: { caseData: CaseData }) {
     setArea(Math.round(cnt * haBlock));
   }, [thr, dg, N, haBlock]);
   return (
-    <div style={{ marginTop: 18 }}>
-      <div className="mono" style={{ fontSize: 11, letterSpacing: 1.5 }}>POCKET SAR LAB — THRESHOLD EXPERIMENT</div>
-      <p className="dim" style={{ fontSize: 13, lineHeight: 1.5 }}>
+    <div className="sect">
+      <div className="sect-h"><span className="idx">02</span><span className="name">POCKET SAR LAB — THRESHOLD EXPERIMENT</span><span className="rule" /></div>
+      <p className="dim" style={{ fontSize: 13.5, lineHeight: 1.6 }}>
         The real calibrated change grid for this case (July → October, dB). Drag the threshold and watch the
-        "changed" area grow or shrink — this is why the case never reports one magic number: it reports the
-        area that survives <em>every</em> setting. Amber = brightened, teal = darkened.
+        flagged area grow or shrink — this is why the case never reports one magic number: it reports the area
+        that survives <em>every</em> setting. Amber = brightened, teal = darkened.
       </p>
-      <canvas ref={canvasRef} width={320} height={320} style={{ width: '100%', borderRadius: 8, border: '1px solid var(--hair)' }} />
-      <div className="rowline"><span>Threshold</span><span className="mono amber">|Δ| &gt; {thr.toFixed(1)} dB</span></div>
-      <input type="range" min={2} max={9} step={0.5} value={thr} onChange={(e) => setThr(Number(e.target.value))} style={{ width: '100%', minHeight: 44 }} />
-      <div className="rowline"><span>Area flagged at this one setting</span><span className="mono">{area.toLocaleString()} ha (before filtering and cross-checks)</span></div>
+      <canvas ref={canvasRef} width={320} height={320} style={{ width: '100%', border: '1px solid var(--hair)', display: 'block' }} />
+      <div className="rowline"><span className="lab">Threshold</span><span className="val amber">|Δ| &gt; {thr.toFixed(1)} dB</span></div>
+      <input type="range" min={2} max={9} step={0.5} value={thr} onChange={(e) => setThr(Number(e.target.value))} style={{ minHeight: 44 }} />
+      <div className="rowline"><span className="lab">Flagged at this one setting</span><span className="val">{area.toLocaleString()} ha</span></div>
+      <div className="dim" style={{ fontSize: 12 }}>Before speckle filtering, minimum-area filtering and cross-checks.</div>
     </div>
   );
 }
@@ -750,27 +826,49 @@ function MyPlace({ caseData, sel }: { caseData: CaseData; sel: Candidate }) {
   void sel;
   return (
     <>
-      <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>MY PLACE WATCH · {caseData.site.name.toUpperCase()}</div>
-      <p className="bn" style={{ fontSize: 19, lineHeight: 1.6 }}>{caseData.placeWatch.bn}</p>
-      <p className="dim" style={{ fontSize: 13 }}>{caseData.placeWatch.en}</p>
-      {audioUrl
-        ? <audio controls src={audioUrl} style={{ width: '100%', margin: '6px 0' }} />
-        : <button className="btn ghost" onClick={speak}>Play Bangla brief</button>}
-      <div className="dim" style={{ fontSize: 12 }}>Pre-generated Bangla voice for this case — synthesized, cached for offline play. A recorded human voice replaces it when the team has one.</div>
-      <div className="rowline"><span>Next NISAR pass (track 19)</span><span className="mono amber">{next.toISOString().slice(0, 10)}</span></div>
-      <div className="rowline"><span>Countdown</span><span className="mono">{daysTick} days · last pass + 12-day cycles</span></div>
+      <div className="hero" style={{ paddingBottom: 0 }}>
+        <div className="kick">MY PLACE WATCH · {caseData.site.name.toUpperCase()}</div>
+        <p className="bn" style={{ fontSize: 20.5, lineHeight: 1.65, margin: 0 }}>{caseData.placeWatch.bn}</p>
+        <p className="dim" style={{ fontSize: 13.5, lineHeight: 1.6, marginTop: 12 }}>{caseData.placeWatch.en}</p>
+      </div>
 
-      <div className="mono" style={{ fontSize: 11, letterSpacing: 1.5, margin: '18px 0 8px' }}>SAR FIELD GUIDE</div>
-      {[
-        ['Why smooth water is dark', 'A calm surface reflects the radar pulse away from the satellite — specular reflection — so almost nothing returns. Rough or flooded ground scatters some back.'],
-        ['L-band vs C-band', 'NISAR L-band (~24 cm) penetrates canopy further than Sentinel-1 C-band (~5.6 cm). Sentinel-1 is radar too — not optical.'],
-        ['Why 12 days', 'NISAR repeats the same track every 12 days. Change detection compares same-track passes, so geometry matches and the difference is the ground, not the view.'],
-        ['What HH and HV see', 'HH is the surface / double-bounce channel — flooded vegetation is often bright at L-band. HV is volume scattering from canopy. Wet soil is not automatically dark; roughness and moisture both matter.'],
-      ].map(([t, b]) => (
-        <div key={t} className="guide-card"><h3>{t}</h3><div className="dim" style={{ fontSize: 14, lineHeight: 1.5 }}>{b}</div></div>
-      ))}
-      {caseData.deltaGrid && <ThresholdLab caseData={caseData} />}
-      <p className="dim" style={{ fontSize: 12 }}>Field Story is intentionally empty: it takes one real voice-and-photo pin from the team, and nothing invented.</p>
+      <div className="sect">
+        <div className="sect-h"><span className="idx">01</span><span className="name">শুনুন — BANGLA BRIEF</span><span className="rule" /></div>
+        {audioUrl
+          ? <audio controls src={audioUrl} />
+          : <button className="btn ghost" onClick={speak} style={{ marginTop: 0 }}>Play Bangla brief</button>}
+        <div className="dim" style={{ fontSize: 12, lineHeight: 1.55 }}>Pre-generated Bangla voice for this case — synthesized, cached for offline play. A recorded human voice replaces it when the team has one.</div>
+      </div>
+
+      <div className="sect">
+        <div className="sect-h"><span className="idx">02</span><span className="name">NEXT PASS — TRACK 19</span><span className="rule" /></div>
+        <div className="strip" style={{ marginTop: 0 }}>
+          <div><div className="k">DATE</div><div className="v">{next.toISOString().slice(0, 10)}</div></div>
+          <div><div className="k">COUNTDOWN</div><div className="v">{daysTick} <small>days</small></div></div>
+          <div><div className="k">CYCLE</div><div className="v">12 <small>days</small></div></div>
+        </div>
+        <div className="dim" style={{ fontSize: 12, marginTop: 8 }}>Same track, same geometry — the difference between passes is the ground, not the view.</div>
+      </div>
+
+      <div className="sect">
+        <div className="sect-h"><span className="idx">03</span><span className="name">SAR FIELD GUIDE</span><span className="rule" /></div>
+        {[
+          ['Why smooth water is dark', 'A calm surface reflects the radar pulse away from the satellite — specular reflection — so almost nothing returns. Rough or flooded ground scatters some back.'],
+          ['L-band vs C-band', 'NISAR L-band (~24 cm) penetrates canopy further than Sentinel-1 C-band (~5.6 cm). Sentinel-1 is radar too — not optical.'],
+          ['Why 12 days', 'NISAR repeats the same track every 12 days. Change detection compares same-track passes, so geometry matches and the difference is the ground, not the view.'],
+          ['What HH and HV see', 'HH is the surface / double-bounce channel — flooded vegetation is often bright at L-band. HV is volume scattering from canopy. Wet soil is not automatically dark; roughness and moisture both matter.'],
+        ].map(([t, b]) => (
+          <details key={t} className="acc">
+            <summary><span className="t">{t}</span><span className="plus">+</span></summary>
+            <div className="body">{b}</div>
+          </details>
+        ))}
+      </div>
+
+      <div className="sect">
+        <div className="sect-h"><span className="idx">04</span><span className="name">FIELD STORY</span><span className="rule" /></div>
+        <p className="dim" style={{ fontSize: 13.5, lineHeight: 1.6 }}>Empty by design. It takes one real voice-and-photo pin from the team — and nothing invented.</p>
+      </div>
     </>
   );
 }
