@@ -100,7 +100,7 @@ function Inbox({ caseData, onOpen, queuedCount }: { caseData: CaseData; onOpen: 
 
   async function downloadCase() {
     // 1) Case JSON + shell into the case cache (the progress ring's first half).
-    const urls = ['/data/case.json', '/data/manifest.json', '/data/scenes.json', '/', '/icons/icon.svg'];
+    const urls = ['/data/case.json', '/data/manifest.json', '/data/scenes.json', '/data/audio.json', '/', '/icons/icon.svg'];
     const cache = await caches.open('trace-case-v1');
     for (let i = 0; i < urls.length; i++) { await cache.add(urls[i]); setDl(Math.round(((i + 1) / urls.length) * 50)); }
     // 2) Basemap tiles for the case area, zooms 10-13 — fetched through the
@@ -185,6 +185,30 @@ function Inbox({ caseData, onOpen, queuedCount }: { caseData: CaseData; onOpen: 
         {awaiting === 0 && <div className="dim" style={{ fontSize: 13 }}>Submit from Verify and watch this card change. Conflicting answers are kept as separate rows — never merged, never called verified.</div>}
       </div>
     </>
+  );
+}
+
+/* ---------------- Plain language (H6) ---------------- */
+function PlainWords({ caseData, sel }: { caseData: CaseData; sel: Candidate }) {
+  const [open, setOpen] = useState(false);
+  const d0 = caseData.drivers.dischargeM3sByDate[caseData.pair[0]];
+  const d1 = caseData.drivers.dischargeM3sByDate[caseData.pair[1]];
+  const dirEn = sel.meanDelta < 0 ? 'went darker — the surface became smoother, consistent with standing water' : 'came back bright — the surface became rougher or drier';
+  const dirBn = sel.meanDelta < 0 ? 'আগের চেয়ে অন্ধকার হয়েছে — পৃষ্ঠ মসৃণ হয়েছে, যা জমে থাকা পানির সঙ্গে মেলে' : 'আগের চেয়ে উজ্জ্বল হয়েছে — পৃষ্ঠ শুকিয়েছে বা খসখসে হয়েছে';
+  return (
+    <div style={{ marginTop: 6 }}>
+      <button className="chip" style={{ minHeight: 40, cursor: 'pointer', color: open ? '#FFB224' : undefined }} onClick={() => setOpen(!open)}>PLAIN WORDS · সহজ ভাষায়</button>
+      {open && (
+        <div className="guide-card" style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 14.5, lineHeight: 1.55 }}>
+            Satellite observations indicate a candidate surface transition at {sel.title.toLowerCase()}. The mapped area is {sel.areaHa} hectares ({sel.robustAreaHa} hectares of it robust across every tested setting). Between {caseData.pair[0]} and {caseData.pair[1]} this ground {dirEn}. River discharge fell from {d0} to {d1} cubic metres per second over the same window. River-stage differences and classification uncertainty affect how confidently this can be read as erosion — which is why a person on the ground is being asked.
+          </div>
+          <div className="bn" style={{ fontSize: 15.5, lineHeight: 1.65, marginTop: 10 }}>
+            স্যাটেলাইটের ছবিতে {sel.id} এলাকায় মাটির চেহারা বদলের ইঙ্গিত মিলেছে। মোট এলাকা {sel.areaHa} হেক্টর, যার {sel.robustAreaHa} হেক্টর সব পরীক্ষায় টিকে আছে। এই জায়গাটি {dirBn}। একই সময়ে নদীর পানির প্রবাহ {d0} থেকে কমে {d1} ঘনমিটার প্রতি সেকেন্ডে নেমেছে। এটি স্থায়ী ভাঙন কিনা, তা মাঠে গিয়ে দেখলেই নিশ্চিত হওয়া যাবে।
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -289,6 +313,7 @@ function CaseMap({ caseData, manifest, sel, onSelect, onPassport, onVerify }: {
       <div className="rowline"><span className="dim">HV intensity (browse, 0–255)</span><span className="mono teal">{hvRaw === null ? 'no HV render this date — see Passport QA' : hv}</span></div>
       <div className="rowline"><span className="dim">Jamuna discharge (GloFAS)</span><span className="mono">{caseData.drivers.dischargeM3sByDate[caseData.dates[dateIdx]]} m³/s</span></div>
       {sel.crosscheck && <div className="dim" style={{ fontSize: 12.5, lineHeight: 1.5 }}><span className="mono teal" style={{ fontSize: 11 }}>CROSSCHECK — </span>{sel.crosscheck.reading}</div>}
+      <PlainWords caseData={caseData} sel={sel} />
       <div className="rowline"><span className="dim">Granule grid</span><span className="mono">{granule.gridM} m native GCOV · browse grid for polygons</span></div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
         {caseData.candidates.map((c) => (
@@ -299,6 +324,40 @@ function CaseMap({ caseData, manifest, sel, onSelect, onPassport, onVerify }: {
       <button className="btn" onClick={onVerify}>Answer this case</button>
     </>
   );
+}
+
+function downloadReport(caseData: CaseData, manifest: Manifest, c: Candidate) {
+  const g = manifest.granules;
+  const lines = [
+    `# TRACE Field — case report ${c.id}`,
+    ``,
+    `Site: ${caseData.site.name} · Case ${caseData.caseId}`,
+    `Pair: ${caseData.pair[0]} → ${caseData.pair[1]} (same track 19, 12-day repeat family)`,
+    ``,
+    `## Finding`,
+    `${c.title}. Mapped area ${c.areaHa} ha; robust core ${c.robustAreaHa} ha (persists across all 12 tested settings — a robustness measure, not a probability).`,
+    `Mean normalised HH change ${c.meanDelta} (${c.direction}). Provenance: ${c.provenance}.`,
+    c.crosscheck ? `Crosscheck: S1 VV ${c.crosscheck.s1.vvDbA} → ${c.crosscheck.s1.vvDbB} dB; S2 NDWI water ${c.crosscheck.s2.ndwiWaterFracJul} → ${c.crosscheck.s2.ndwiWaterFracOct}. ${c.crosscheck.reading}` : `Crosscheck: not available.`,
+    ``,
+    `## Exposure (labelled estimates, not damage)`,
+    `OSM buildings within 1 km of the centre: ${manifest.exposure?.buildingsWithin1km?.[c.id] ?? 'unknown'} (a floor, not a census). WorldPop 2020 population inside the robust core: ~${manifest.exposureWorldPop?.population[c.id]?.core ?? 'unknown'}; including fringe: ~${manifest.exposureWorldPop?.population[c.id]?.corePlusFringe ?? 'unknown'}. Exposure is not damage.`,
+    ``,
+    `## Drivers`,
+    `GloFAS discharge: ${caseData.drivers.dischargeM3sByDate[caseData.pair[0]]} → ${caseData.drivers.dischargeM3sByDate[caseData.pair[1]]} m3/s. NASA POWER rain over the pair window: ${caseData.drivers.rainPairTotalMm} mm. FFWC gauge stage has no public API; discharge is the labelled substitute.`,
+    ``,
+    `## Provenance`,
+    `Start granule: ${g[1].granuleId}`,
+    `End granule: ${g[g.length - 1].granuleId}`,
+    `Product: NISAR L2 GCOV PROVISIONAL V1. Values shown in the app are browse intensity (0-255), not calibrated dB, until the GCOV float pipeline lands.`,
+    `Case hash: ${caseData.caseHash} · Manifest hash: ${caseData.manifestHash}`,
+    ``,
+    `## Labels`,
+    `MEASURED = from an identified observation. DERIVED = computed from specified inputs. CROSSCHECKED = compared with independent compatible evidence. A field photo is evidence awaiting review, never automatic verification.`,
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `trace-report-${c.id}.md`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
 /* ---------------- Change Passport ---------------- */
@@ -366,6 +425,65 @@ function PassportShare({ caseData, sel }: { caseData: CaseData; sel: Candidate }
 }
 
 /* ---------------- Verify ---------------- */
+/* ---------------- Point & Prove (A2) ----------------
+   Live camera + direction/distance/accuracy to the selected candidate.
+   The overlay is indicative only and is labelled APPROXIMATE — phone GPS
+   error and heading error apply; it is not an alignment proof. */
+function PointProve({ sel }: { sel: Candidate }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [camOn, setCamOn] = useState(false);
+  const [pos, setPos] = useState<{ lat: number; lon: number; acc: number } | null>(null);
+  const [heading, setHeading] = useState<number | null>(null);
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const id = navigator.geolocation.watchPosition(
+      (p) => setPos({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }),
+      () => {}, { enableHighAccuracy: true });
+    const onOri = (e: DeviceOrientationEvent) => {
+      const h = (e as unknown as { webkitCompassHeading?: number }).webkitCompassHeading ?? (e.alpha !== null ? 360 - e.alpha : null);
+      if (h !== null && !Number.isNaN(h)) setHeading(h);
+    };
+    window.addEventListener('deviceorientationabsolute', onOri);
+    window.addEventListener('deviceorientation', onOri);
+    return () => { navigator.geolocation.clearWatch(id); window.removeEventListener('deviceorientationabsolute', onOri); window.removeEventListener('deviceorientation', onOri); };
+  }, []);
+  useEffect(() => () => { streamRef.current?.getTracks().forEach((t) => t.stop()); }, []);
+  async function toggleCam() {
+    if (camOn) { streamRef.current?.getTracks().forEach((t) => t.stop()); setCamOn(false); return; }
+    try {
+      const st = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = st;
+      if (videoRef.current) { videoRef.current.srcObject = st; await videoRef.current.play(); }
+      setCamOn(true);
+    } catch { /* camera denied — the numeric bearing/distance below still works */ }
+  }
+  const [clon, clat] = sel.centroid;
+  const km = pos ? haversineKm(pos.lat, pos.lon, clat, clon) : null;
+  const bear = pos ? bearingDeg(pos.lat, pos.lon, clat, clon) : null;
+  const arrowDeg = bear !== null ? bear - (heading ?? 0) : 0;
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div className="mono" style={{ fontSize: 11, letterSpacing: 1.5 }}>POINT &amp; PROVE · {sel.id}</div>
+      <div style={{ position: 'relative', marginTop: 8, borderRadius: 8, overflow: 'hidden', background: '#000', minHeight: camOn ? undefined : 0 }}>
+        <video ref={videoRef} playsInline muted style={{ width: '100%', display: camOn ? 'block' : 'none' }} />
+        {camOn && (
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', top: 8, left: 8 }} className="chip">APPROXIMATE</div>
+            <div style={{ position: 'absolute', top: '38%', left: '50%', transform: `translate(-50%,-50%) rotate(${arrowDeg}deg)`, fontSize: 44, color: '#FFB224', textShadow: '0 0 8px #000' }}>↑</div>
+            <div className="mono" style={{ position: 'absolute', bottom: 8, left: 8, right: 8, fontSize: 12, color: '#E8E4DA', textShadow: '0 0 6px #000' }}>
+              {km !== null ? `${km.toFixed(2)} km to ${sel.id} centre` : 'waiting for GPS'} · GPS ±{pos ? Math.round(pos.acc) : '—'} m · the ring you must search is the accuracy, not a point
+            </div>
+          </div>
+        )}
+      </div>
+      <button className="btn ghost" onClick={toggleCam}>{camOn ? 'Stop camera' : 'Open camera — point at the target'}</button>
+      <div className="rowline"><span className="dim">Bearing to {sel.id}</span><span className="mono">{bear !== null ? `${Math.round(bear)}°` : '—'}{heading !== null ? ` · phone heading ${Math.round(heading)}°` : ' · allow motion sensors for live heading'}</span></div>
+      <div className="dim" style={{ fontSize: 12 }}>Approximate by design: GPS and compass error are shown, never hidden. The satellite outline is indicative at this scale.</div>
+    </div>
+  );
+}
+
 const ANSWERS: { id: ObsAnswer; label: string }[] = [
   { id: 'water', label: 'Water' }, { id: 'wet-land', label: 'Wet land' }, { id: 'sandbar', label: 'Sandbar' },
   { id: 'vegetation', label: 'Vegetation / crop' }, { id: 'not-observable', label: 'Not observable' },
@@ -446,7 +564,7 @@ function Verify({ caseData, sel, onSelect }: { caseData: CaseData; sel: Candidat
       {mine.length > 0 && <>
         <div className="mono" style={{ fontSize: 11, letterSpacing: 1.5, marginTop: 14 }}>YOUR QUEUE</div>
         {mine.map((o) => (
-          <div key={o.id} className="rowline"><span>{o.caseCandidateId} — {o.answer}</span><span className="chip">{o.status.replace('-', ' ').toUpperCase()}</span></div>
+          <div key={o.id} className="rowline"><span>{o.caseCandidateId} — {o.answer}{o.relation ? ` · ${o.relation}` : ''}</span><span className="chip">{o.status.replace('-', ' ').toUpperCase()}</span></div>
         ))}
         <button className="btn ghost" onClick={() => syncAllQueued().then(refresh)}>Sync now</button>
       </>}
@@ -539,6 +657,12 @@ function WalkRadar({ caseData }: { caseData: CaseData }) {
 
 /* ---------------- My Place + field guide ---------------- */
 function MyPlace({ caseData, sel }: { caseData: CaseData; sel: Candidate }) {
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch('/data/audio.json').then((r) => r.json()).then((j) => { if (live) setAudioUrl(j.myplace_bn); }).catch(() => {});
+    return () => { live = false; };
+  }, []);
   const last = caseData.dates[caseData.dates.length - 1];
   const next = useMemo(() => nextPass(last), [last]);
   const days = Math.max(0, Math.ceil((next.getTime() - Date.now()) / 86400000));
@@ -555,7 +679,10 @@ function MyPlace({ caseData, sel }: { caseData: CaseData; sel: Candidate }) {
       <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>MY PLACE WATCH · {caseData.site.name.toUpperCase()}</div>
       <p className="bn" style={{ fontSize: 19, lineHeight: 1.6 }}>{caseData.placeWatch.bn}</p>
       <p className="dim" style={{ fontSize: 13 }}>{caseData.placeWatch.en}</p>
-      <button className="btn ghost" onClick={speak}>Play Bangla brief</button>
+      {audioUrl
+        ? <audio controls src={audioUrl} style={{ width: '100%', margin: '6px 0' }} />
+        : <button className="btn ghost" onClick={speak}>Play Bangla brief</button>}
+      <div className="dim" style={{ fontSize: 12 }}>Pre-generated Bangla voice for this case — synthesized, cached for offline play. A recorded human voice replaces it when the team has one.</div>
       <div className="rowline"><span>Next NISAR pass (track 19)</span><span className="mono amber">{next.toISOString().slice(0, 10)}</span></div>
       <div className="rowline"><span>Countdown</span><span className="mono">{daysTick} days · last pass + 12-day cycles</span></div>
 

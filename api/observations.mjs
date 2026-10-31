@@ -29,6 +29,7 @@ export default async function handler(req, res) {
     const row = {
       candidateId: String(body.candidateId || ''),
       answer: String(body.answer || ''),
+      relation: String(body.relation || ''),
       note: String(body.note || '').slice(0, 1000),
       lat: body.lat ?? null, lon: body.lon ?? null, accuracyM: body.accuracyM ?? null,
       takenAt: String(body.takenAt || new Date().toISOString()),

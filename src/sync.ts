@@ -51,7 +51,7 @@ async function postToApi(obs: Observation): Promise<boolean> {
     const res = await fetch('/api/observations', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
       body: JSON.stringify({
-        candidateId: obs.caseCandidateId, answer: obs.answer, note: obs.note,
+        candidateId: obs.caseCandidateId, answer: obs.answer, note: obs.note, relation: obs.relation ?? '',
         lat: obs.lat, lon: obs.lon, accuracyM: obs.accuracyM, takenAt: obs.takenAt,
         observerTag: obs.observerTag,
       }),

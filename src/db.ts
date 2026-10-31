@@ -15,6 +15,7 @@ export interface Observation {
   photo?: Blob;
   voice?: Blob;
   status: ObsStatus;
+  relation?: 'supports' | 'contradicts' | 'inconclusive'; // vs the satellite reading, per H5
   observerTag: string; // e.g. "Demo observer, not at case site" when GPS is far from the case
 }
 
