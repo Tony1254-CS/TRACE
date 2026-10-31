@@ -1,6 +1,6 @@
 {
  "caseId": "chilmari-track19-frame076",
- "generated": "2026-10-31 v2",
+ "generated": "2026-10-31 v3",
  "audit": "STEP0 v1 - NASA CMR NISAR_L2_GCOV_PROVISIONAL_V1 + ASF GCOV docs + Planetary Computer STAC",
  "product": {
   "collection": "NISAR_L2_GCOV_PROVISIONAL_V1",
@@ -190,7 +190,7 @@
   "jrcGlobalSurfaceWater": "UNVERIFIED",
   "worldPopOsmExposure": "UNVERIFIED - OSM credit required under ODbL when used"
  },
- "manifestHash": "sha256:b43d0d69bcf18acdb3928e521cc875b2095cdf00a0c0223a26afa93e4b90fd36",
+ "manifestHash": "sha256:06de86d58fb6ccff53c9b85161f3685b55a8cafa1acaa4f3f6818c9e62c5c2ff",
  "method": "Browse-derived: ASF LATLON browse (HH/HV/HH composite, R==B verified, R~HHHH r=0.86, G~HVHV r=0.85), full-frame percentile harmonisation, ensemble of 12 settings (3 thresholds x 2 median windows x 2 MMU). Robust = change in all 12, fringe = change in some. Calibrated GCOV float processing is gated on an Earthdata login (h5 returns 401).",
  "browseGrid": {
   "stepDeg": 0.00045,
@@ -235,5 +235,27 @@
   },
   "namedSettlementsInAOI": 28,
   "note": "Building counts are OSM-mapped features within 1 km of each candidate centroid; OSM completeness varies, so these are a floor, not a census. WorldPop grid not yet ingested."
+ },
+ "crosscheck": {
+  "sentinel1": "Sentinel-1 RTC (ASF) C-band VV gamma-0, relative orbit 114, 2026-07-13 -> 2026-10-05, Planetary Computer COGs",
+  "sentinel2": "Sentinel-2 L2A NDWI > 0 water fraction, tile T45RYJ, 2026-07-04 (14.8% cloud) and 2026-10-12 (0.0% cloud)",
+  "jrc": "JRC Global Surface Water: public JEODPP MonthlyHistory mirror ends at 2021 - no 2026 monthly water openly downloadable there (checked 2026-10-31). S2 NDWI fills the optical role."
+ },
+ "exposureWorldPop": {
+  "source": "WorldPop bgd_ppp_2020.tif (people per ~100 m pixel, 2020, Global_2000_2020 release)",
+  "population": {
+   "CH-01": {
+    "core": 1499,
+    "corePlusFringe": 2567
+   },
+   "CH-02": {
+    "core": 1272,
+    "corePlusFringe": 2544
+   },
+   "CH-03": {
+    "core": 554,
+    "corePlusFringe": 1039
+   }
+  }
  }
 }

@@ -9,8 +9,15 @@ export interface Manifest {
   browseGrid?: { stepDeg: number; haPerPixel: number; note: string };
   qaFlags?: string[];
   exposure?: { buildingsWithin1km?: Record<string, number>; namedSettlementsInAOI?: number; note?: string };
+  exposureWorldPop?: { source: string; population: Record<string, { core: number; corePlusFringe: number }> };
+  crosscheck?: { sentinel1: string; sentinel2: string; jrc: string };
   sentinel1RTC: { band: string; dates: string[]; polarizations: string[] };
   sentinel2: { tile: string; acquisitions: number; clearUnder20Pct: number };
+}
+export interface Crosscheck {
+  s1: { vvDbA: number; vvDbB: number; darkFracA: number; darkFracB: number; dateA: string; dateB: string };
+  s2: { ndwiWaterFracJul: number; ndwiWaterFracOct: number };
+  reading: string;
 }
 export interface Candidate {
   id: string; title: string; question: string; centroid: [number, number]; distanceKm: number;
@@ -18,6 +25,7 @@ export interface Candidate {
   core: [number, number][]; fringe: [number, number][]; ghost: [number, number][];
   hhIntensity: number[]; hvIntensity: (number | null)[];
   meanDelta: number; direction: string; provenance: string; status: string;
+  crosscheck?: Crosscheck;
 }
 export interface Drivers {
   dischargeM3sByDate: Record<string, number>; dischargeSource: string;

@@ -1,12 +1,14 @@
 {
   "dependencies": {
+    "@vercel/blob": "^1.0.0",
     "dexie": "^4.0.8",
     "maplibre-gl": "^4.7.1",
+    "qrcode": "^1.5.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@vercel/blob": "^1.0.0"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",

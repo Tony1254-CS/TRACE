@@ -1,0 +1,54 @@
+{
+ "sentinel1": {
+  "CH-01": {
+   "vvDb_a": -6.92,
+   "darkFrac_a": 0.012,
+   "date_a": "2026-07-13",
+   "vvDb_b": -8.49,
+   "darkFrac_b": 0.002,
+   "date_b": "2026-10-05",
+   "s1Agrees": false,
+   "s1DarkChange": -0.01
+  },
+  "CH-02": {
+   "vvDb_a": -10.03,
+   "darkFrac_a": 0.066,
+   "date_a": "2026-07-13",
+   "vvDb_b": -9.6,
+   "darkFrac_b": 0.021,
+   "date_b": "2026-10-05",
+   "s1Agrees": true,
+   "s1DarkChange": -0.045
+  },
+  "CH-03": {
+   "vvDb_a": -14.78,
+   "darkFrac_a": 0.482,
+   "date_a": "2026-07-13",
+   "vvDb_b": -14.49,
+   "darkFrac_b": 0.387,
+   "date_b": "2026-10-05",
+   "s1Agrees": false,
+   "s1DarkChange": -0.095
+  }
+ },
+ "sentinel2": {
+  "CH-01": {
+   "ndwiWaterFrac_jul": 0.129,
+   "date_jul": "2026-07-04",
+   "ndwiWaterFrac_oct": 0.005,
+   "date_oct": "2026-10-12"
+  },
+  "CH-02": {
+   "ndwiWaterFrac_jul": 0.0,
+   "date_jul": "2026-07-04",
+   "ndwiWaterFrac_oct": 0.0,
+   "date_oct": "2026-10-12"
+  },
+  "CH-03": {
+   "ndwiWaterFrac_jul": 0.284,
+   "date_jul": "2026-07-04",
+   "ndwiWaterFrac_oct": 0.433,
+   "date_oct": "2026-10-12"
+  }
+ }
+}

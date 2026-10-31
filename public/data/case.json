@@ -231,8 +231,23 @@
    ],
    "meanDelta": 0.472,
    "direction": "brighter",
-   "provenance": "DERIVED",
-   "status": "awaiting-observation"
+   "provenance": "CROSSCHECKED",
+   "status": "awaiting-observation",
+   "crosscheck": {
+    "s1": {
+     "vvDbA": -6.92,
+     "vvDbB": -8.49,
+     "darkFracA": 0.012,
+     "darkFracB": 0.002,
+     "dateA": "2026-07-13",
+     "dateB": "2026-10-05"
+    },
+    "s2": {
+     "ndwiWaterFracJul": 0.129,
+     "ndwiWaterFracOct": 0.005
+    },
+    "reading": "Optical saw open water on 13% of this core on 4 Jul and almost none (0.5%) on 12 Oct; C-band called it land on both of its dates. Two independent sensors agree with the NISAR story: real July water, gone by October."
+   }
   },
   {
    "id": "CH-02",
@@ -465,8 +480,23 @@
    ],
    "meanDelta": 0.511,
    "direction": "brighter",
-   "provenance": "DERIVED",
-   "status": "awaiting-observation"
+   "provenance": "CROSSCHECKED",
+   "status": "awaiting-observation",
+   "crosscheck": {
+    "s1": {
+     "vvDbA": -10.03,
+     "vvDbB": -9.6,
+     "darkFracA": 0.066,
+     "darkFracB": 0.021,
+     "dateA": "2026-07-13",
+     "dateB": "2026-10-05"
+    },
+    "s2": {
+     "ndwiWaterFracJul": 0.0,
+     "ndwiWaterFracOct": 0.0
+    },
+    "reading": "Optical saw no open water here on either clear date, and C-band agrees the ground emerged by October. So the July NISAR darkness was a smooth wet surface \u2014 flooded mud or wet sand \u2014 not a lake. The question below is the one a person on the ground can settle."
+   }
   },
   {
    "id": "CH-03",
@@ -635,8 +665,23 @@
    ],
    "meanDelta": -0.471,
    "direction": "darker",
-   "provenance": "DERIVED",
-   "status": "awaiting-observation"
+   "provenance": "CROSSCHECKED",
+   "status": "awaiting-observation",
+   "crosscheck": {
+    "s1": {
+     "vvDbA": -14.78,
+     "vvDbB": -14.49,
+     "darkFracA": 0.482,
+     "darkFracB": 0.387,
+     "dateA": "2026-07-13",
+     "dateB": "2026-10-05"
+    },
+    "s2": {
+     "ndwiWaterFracJul": 0.284,
+     "ndwiWaterFracOct": 0.433
+    },
+    "reading": "Optical water coverage grew from 28% to 43% between 4 Jul and 12 Oct, and C-band calls this ground water-like on both dates. The NISAR darkening is real: standing water expanded here while the river around it fell."
+   }
   }
  ],
  "drivers": {
@@ -4903,6 +4948,6 @@
    ]
   ]
  },
- "manifestHash": "sha256:b43d0d69bcf18acdb3928e521cc875b2095cdf00a0c0223a26afa93e4b90fd36",
- "caseHash": "sha256:f16372952f0d214fc9d7acf8477946c3ef7248202289bb8e6e09f610155b9ddd"
+ "manifestHash": "sha256:06de86d58fb6ccff53c9b85161f3685b55a8cafa1acaa4f3f6818c9e62c5c2ff",
+ "caseHash": "sha256:d93789d4ab10a761926c39e059b92182d0a482885d1bcc7935e93a1e0c62a6da"
 }

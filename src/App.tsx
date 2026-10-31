@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadCase, nextPass, haversineKm, bearingDeg, type CaseData, type Manifest, type Candidate } from './data';
 import { db, type Observation, type ObsAnswer } from './db';
 import { syncAllQueued, readWebInbox, fetchInboxRows, type WebInboxRow } from './sync';
+import QRCode from 'qrcode';
 
 type Tab = 'inbox' | 'map' | 'verify' | 'radar' | 'place';
 const TABS: { id: Tab; label: string }[] = [
@@ -92,9 +93,30 @@ function Inbox({ caseData, onOpen, queuedCount }: { caseData: CaseData; onOpen: 
   const r = caseData.sensorRace;
 
   async function downloadCase() {
+    // 1) Case JSON + shell into the case cache (the progress ring's first half).
     const urls = ['/data/case.json', '/data/manifest.json', '/', '/icons/icon.svg'];
     const cache = await caches.open('trace-case-v1');
-    for (let i = 0; i < urls.length; i++) { await cache.add(urls[i]); setDl(Math.round(((i + 1) / urls.length) * 100)); }
+    for (let i = 0; i < urls.length; i++) { await cache.add(urls[i]); setDl(Math.round(((i + 1) / urls.length) * 50)); }
+    // 2) Basemap tiles for the case area, zooms 10-13 — fetched through the
+    //    service worker, whose runtime cache (basemap-tiles) serves them
+    //    offline. Tile math is standard slippy-map.
+    const lon2x = (lon: number, z: number) => Math.floor(((lon + 180) / 360) * 2 ** z);
+    const lat2y = (lat: number, z: number) => {
+      const r = (lat * Math.PI) / 180;
+      return Math.floor(((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * 2 ** z);
+    };
+    const tiles: string[] = [];
+    for (const z of [10, 11, 12, 13]) {
+      for (let x = lon2x(89.58, z); x <= lon2x(89.82, z); x++)
+        for (let y = lat2y(25.70, z); y <= lat2y(25.44, z); y++)
+          tiles.push(`https://basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png`);
+    }
+    let done = 0;
+    for (const t of tiles) {
+      try { await fetch(t); } catch { /* a missing tile is a grey square, not a failure */ }
+      done++;
+      setDl(50 + Math.round((done / tiles.length) * 50));
+    }
   }
   const awaiting = inbox.length;
   const circ = 2 * Math.PI * 26;
@@ -228,6 +250,7 @@ function CaseMap({ caseData, manifest, sel, onSelect, onPassport, onVerify }: {
       <div className="rowline"><span className="dim">HH intensity (browse, 0–255)</span><span className="mono amber">{hh}</span></div>
       <div className="rowline"><span className="dim">HV intensity (browse, 0–255)</span><span className="mono teal">{hvRaw === null ? 'no HV render this date — see Passport QA' : hv}</span></div>
       <div className="rowline"><span className="dim">Jamuna discharge (GloFAS)</span><span className="mono">{caseData.drivers.dischargeM3sByDate[caseData.dates[dateIdx]]} m³/s</span></div>
+      {sel.crosscheck && <div className="dim" style={{ fontSize: 12.5, lineHeight: 1.5 }}><span className="mono teal" style={{ fontSize: 11 }}>CROSSCHECK — </span>{sel.crosscheck.reading}</div>}
       <div className="rowline"><span className="dim">Granule grid</span><span className="mono">{granule.gridM} m native GCOV · browse grid for polygons</span></div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
         {caseData.candidates.map((c) => (
@@ -265,13 +288,41 @@ function Passport({ caseData, manifest, sel, onClose }: { caseData: CaseData; ma
         <tr><td>THRESHOLD</td><td style={{ fontSize: 12 }}>{caseData.thresholdNote}</td></tr>
         <tr><td>AREA</td><td className="mono">{sel.areaHa} ha on the browse grid ({manifest.browseGrid?.haPerPixel} ha/pixel, ~50 m) · robust core {sel.robustAreaHa} ha · native GCOV grid is {manifest.commonGridM} m</td></tr>
         <tr><td>DRIVERS</td><td className="mono">Discharge {caseData.drivers.dischargeM3sByDate[caseData.pair[0]]} → {caseData.drivers.dischargeM3sByDate[caseData.pair[1]]} m³/s (GloFAS) · rain over the pair {caseData.drivers.rainPairTotalMm} mm (NASA POWER)</td></tr>
-        <tr><td>EXPOSURE (OSM)</td><td className="mono">{manifest.exposure?.buildingsWithin1km?.[sel.id] ?? '—'} mapped buildings within 1 km · {manifest.exposure?.namedSettlementsInAOI} named settlements in the case area · © OpenStreetMap contributors (ODbL)</td></tr>
+        <tr><td>EXPOSURE</td><td className="mono">{manifest.exposure?.buildingsWithin1km?.[sel.id] ?? '—'} mapped buildings within 1 km (OSM, © contributors, ODbL) · {manifest.exposure?.namedSettlementsInAOI} named settlements in the case area · WorldPop 2020: ≈{manifest.exposureWorldPop?.population[sel.id]?.core.toLocaleString()} people inside the robust core, ≈{manifest.exposureWorldPop?.population[sel.id]?.corePlusFringe.toLocaleString()} including the fringe</td></tr>
+        {sel.crosscheck && <tr><td>CROSSCHECK</td><td style={{ fontSize: 12 }}>Sentinel-1 C-band VV {sel.crosscheck.s1.vvDbA} → {sel.crosscheck.s1.vvDbB} dB ({sel.crosscheck.s1.dateA} → {sel.crosscheck.s1.dateB}, calibrated gamma-0) · Sentinel-2 NDWI water fraction {sel.crosscheck.s2.ndwiWaterFracJul} → {sel.crosscheck.s2.ndwiWaterFracOct} (4 Jul → 12 Oct). {sel.crosscheck.reading}</td></tr>}
         <tr><td>PRODUCT</td><td className="mono">{manifest.product.collection} · {manifest.product.maturity} · CRID {manifest.product.crid}</td></tr>
         <tr><td>QC FLAGS</td><td style={{ fontSize: 12 }}>orbit accuracy {gA.orbitAccuracy} · {(manifest.qaFlags ?? []).join(' ')}</td></tr>
         <tr><td>MANIFEST HASH</td><td className="granule">{manifest.manifestHash}</td></tr>
         <tr><td>PROVENANCE</td><td><span className="chip teal">{sel.provenance}</span> <span className="chip">MEASURED: CATALOGUE + BROWSE</span></td></tr>
       </tbody></table>
       <p className="dim" style={{ fontSize: 12 }}>This polygon was computed from real NISAR imagery of these two granules. The one upgrade left is radiometric: calibrated float gamma-0 from the .h5 (Earthdata login) instead of the browse render — same pipeline, better numbers.</p>
+      <PassportShare caseData={caseData} sel={sel} />
+    </div>
+  );
+}
+
+function PassportShare({ caseData, sel }: { caseData: CaseData; sel: Candidate }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [copied, setCopied] = useState(false);
+  const url = `${window.location.origin}/?case=${caseData.caseId}&candidate=${sel.id}`;
+  useEffect(() => {
+    if (canvasRef.current) {
+      void QRCode.toCanvas(canvasRef.current, url, { width: 148, margin: 1, color: { dark: '#0A0E12', light: '#E8E4DA' } });
+    }
+  }, [url]);
+  async function share() {
+    const text = `TRACE Field case ${sel.id} — ${sel.title}. ${sel.question} Open the case: ${url}`;
+    if (navigator.share) { try { await navigator.share({ title: 'TRACE Field case', text, url }); return; } catch { /* user cancelled */ } }
+    try { await navigator.clipboard.writeText(text); setCopied(true); } catch { /* clipboard unavailable */ }
+  }
+  return (
+    <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginTop: 12 }}>
+      <canvas ref={canvasRef} width={148} height={148} style={{ borderRadius: 6, flex: 'none' }} />
+      <div>
+        <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>HAND THIS CASE ON</div>
+        <p className="dim" style={{ fontSize: 12.5 }}>Scan to open this exact case on another phone, or share the link. The case file carries its own manifest hash, so the copy can be checked against this one.</p>
+        <button className="btn" onClick={share}>{copied ? 'Link copied' : 'Share case link'}</button>
+      </div>
     </div>
   );
 }
