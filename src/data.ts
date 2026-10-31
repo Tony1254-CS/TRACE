@@ -39,6 +39,7 @@ export interface CaseData {
   sensorRace: { opticalClear: number; opticalTotal: number; nisarSeen: number; nisarTotal: number; s1Dates: number };
   placeWatch: { bn: string; en: string };
   walkGrid: { date: string; layer: string; unit?: string; values: (number | null)[][] };
+  deltaGrid?: { pair: string[]; unit: string; note: string; values: (number | null)[][] };
   manifestHash: string; caseHash: string;
 }
 

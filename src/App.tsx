@@ -97,6 +97,10 @@ function Inbox({ caseData, onOpen, queuedCount }: { caseData: CaseData; onOpen: 
     return () => { live = false; clearInterval(i); };
   }, []);
   const r = caseData.sensorRace;
+  const replay = [
+    ...caseData.dates.map((d) => ({ t: d, label: `NISAR pass — track 19 frame 076 acquired`, kind: 'pass' as const })),
+    ...inbox.map((o) => ({ t: o.takenAt.slice(0, 10), label: `Field evidence: ${o.candidateId} — ${o.answer}${o.relation ? ` (${o.relation})` : ''} · awaiting review`, kind: 'evidence' as const })),
+  ].sort((a, b) => a.t.localeCompare(b.t));
 
   async function downloadCase() {
     // 1) Case JSON + shell into the case cache (the progress ring's first half).
@@ -487,6 +491,22 @@ function PointProve({ sel }: { sel: Candidate }) {
   );
 }
 
+function exportStory(caseData: CaseData, rows: Observation[]) {
+  const lines = [
+    `# Field story — ${caseData.site.name} (${caseData.caseId})`,
+    ``,
+    `Exported from TRACE Field. Every record below is evidence awaiting review — none of it is verified ground truth.`,
+    ``,
+    ...rows.map((o) => `- **${o.takenAt}** · ${o.caseCandidateId}: answered "${o.answer}"${o.relation ? ` — ${o.relation} the satellite reading` : ''}${o.lat !== null ? ` · GPS ${o.lat}, ${o.lon} (±${o.accuracyM} m)` : ''}${o.note ? ` · note: ${o.note}` : ''} · status: ${o.status}${o.observerTag ? ` · ${o.observerTag}` : ''}`),
+    ``,
+    `The satellite asked. These are the answers so far.`,
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'trace-field-story.md'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
 const ANSWERS: { id: ObsAnswer; label: string }[] = [
   { id: 'water', label: 'Water' }, { id: 'wet-land', label: 'Wet land' }, { id: 'sandbar', label: 'Sandbar' },
   { id: 'vegetation', label: 'Vegetation / crop' }, { id: 'not-observable', label: 'Not observable' },
@@ -563,6 +583,7 @@ function Verify({ caseData, sel, onSelect }: { caseData: CaseData; sel: Candidat
       <button className="btn ghost" onClick={toggleVoice}>{rec ? 'Stop voice note' : voice ? 'Voice note attached ✓' : 'Add voice note (optional)'}</button>
       <textarea rows={3} placeholder="Note — what did you actually see?" value={note} onChange={(e) => setNote(e.target.value)} style={{ marginTop: 10 }} />
       <button className="btn" disabled={!answer} onClick={submit}>Submit evidence</button>
+      {mine.length > 0 && <button className="btn ghost" onClick={() => exportStory(caseData, mine)}>Export field story (.md) — evidence so far</button>}
       <p className="dim" style={{ fontSize: 12 }}>Your photo is evidence for review, not ground truth. Submissions are never labelled “verified”.</p>
       {mine.length > 0 && <>
         <div className="mono" style={{ fontSize: 11, letterSpacing: 1.5, marginTop: 14 }}>YOUR QUEUE</div>
@@ -663,6 +684,44 @@ function WalkRadar({ caseData }: { caseData: CaseData }) {
   );
 }
 
+/* ---------------- Pocket SAR Lab: threshold experiment (O3) ---------------- */
+function ThresholdLab({ caseData }: { caseData: CaseData }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [thr, setThr] = useState(4.5);
+  const dg = caseData.deltaGrid!;
+  const N = dg.values.length;
+  // AOI is ~702 km2 over a 64x64 block grid -> ha per block:
+  const haBlock = (70200) / (N * N);
+  const [area, setArea] = useState(0);
+  useEffect(() => {
+    const cv = canvasRef.current; if (!cv) return;
+    const g2 = cv.getContext('2d')!; const s = cv.width / N;
+    let cnt = 0;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const v = dg.values[y][x];
+      const chg = v !== null && Math.abs(v) > thr;
+      if (chg) cnt++;
+      g2.fillStyle = v === null ? '#0A0E12' : chg ? (v > 0 ? '#FFB224' : '#3FD0C9') : '#1a222b';
+      g2.fillRect(x * s, y * s, s + 1, s + 1);
+    }
+    setArea(Math.round(cnt * haBlock));
+  }, [thr, dg, N, haBlock]);
+  return (
+    <div style={{ marginTop: 18 }}>
+      <div className="mono" style={{ fontSize: 11, letterSpacing: 1.5 }}>POCKET SAR LAB — THRESHOLD EXPERIMENT</div>
+      <p className="dim" style={{ fontSize: 13, lineHeight: 1.5 }}>
+        The real calibrated change grid for this case (July → October, dB). Drag the threshold and watch the
+        "changed" area grow or shrink — this is why the case never reports one magic number: it reports the
+        area that survives <em>every</em> setting. Amber = brightened, teal = darkened.
+      </p>
+      <canvas ref={canvasRef} width={320} height={320} style={{ width: '100%', borderRadius: 8, border: '1px solid var(--hair)' }} />
+      <div className="rowline"><span>Threshold</span><span className="mono amber">|Δ| &gt; {thr.toFixed(1)} dB</span></div>
+      <input type="range" min={2} max={9} step={0.5} value={thr} onChange={(e) => setThr(Number(e.target.value))} style={{ width: '100%', minHeight: 44 }} />
+      <div className="rowline"><span>Area flagged at this one setting</span><span className="mono">{area.toLocaleString()} ha (before filtering and cross-checks)</span></div>
+    </div>
+  );
+}
+
 /* ---------------- My Place + field guide ---------------- */
 function MyPlace({ caseData, sel }: { caseData: CaseData; sel: Candidate }) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -703,6 +762,7 @@ function MyPlace({ caseData, sel }: { caseData: CaseData; sel: Candidate }) {
       ].map(([t, b]) => (
         <div key={t} className="guide-card"><h3>{t}</h3><div className="dim" style={{ fontSize: 14, lineHeight: 1.5 }}>{b}</div></div>
       ))}
+      {caseData.deltaGrid && <ThresholdLab caseData={caseData} />}
       <p className="dim" style={{ fontSize: 12 }}>Field Story is intentionally empty: it takes one real voice-and-photo pin from the team, and nothing invented.</p>
     </>
   );

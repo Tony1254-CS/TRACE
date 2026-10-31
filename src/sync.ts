@@ -15,7 +15,7 @@ const SUPA_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPA_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 export interface WebInboxRow {
-  candidateId: string; answer: string; takenAt: string; status: string; observerTag: string;
+  candidateId: string; answer: string; takenAt: string; status: string; observerTag: string; relation?: string;
 }
 export function readWebInbox(): WebInboxRow[] {
   try { return JSON.parse(localStorage.getItem('trace-web-inbox') ?? '[]'); } catch { return []; }
@@ -32,7 +32,7 @@ export async function fetchRemoteInbox(): Promise<WebInboxRow[] | null> {
     const rows = await res.json() as Record<string, unknown>[];
     return rows.map((r) => ({
       candidateId: String(r.candidateId), answer: String(r.answer),
-      takenAt: String(r.takenAt ?? ''), status: 'awaiting review',
+      takenAt: String(r.takenAt ?? ''), status: 'awaiting review', relation: String(r.relation ?? ''),
       observerTag: String(r.observerTag ?? ''),
     }));
   } catch { return null; }
@@ -83,7 +83,7 @@ export async function syncObservation(obs: Observation): Promise<void> {
   } else {
     // On-device fallback: the row joins THIS device's review inbox.
     const inbox = readWebInbox();
-    inbox.push({ candidateId: obs.caseCandidateId, answer: obs.answer, takenAt: obs.takenAt, status: 'awaiting review', observerTag: obs.observerTag });
+    inbox.push({ candidateId: obs.caseCandidateId, answer: obs.answer, takenAt: obs.takenAt, status: 'awaiting review', observerTag: obs.observerTag, relation: obs.relation ?? '' });
     localStorage.setItem('trace-web-inbox', JSON.stringify(inbox));
   }
   await db.observations.update(obs.id, { status: 'awaiting-review' });
