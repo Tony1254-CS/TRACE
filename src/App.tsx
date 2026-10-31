@@ -5,6 +5,12 @@ import { syncAllQueued, readWebInbox, fetchInboxRows, type WebInboxRow } from '.
 import QRCode from 'qrcode';
 
 type Tab = 'inbox' | 'map' | 'verify' | 'radar' | 'place';
+
+let scenesPromise: Promise<Record<string, string>> | null = null;
+function loadScenes(): Promise<Record<string, string>> {
+  if (!scenesPromise) scenesPromise = fetch('/data/scenes.json').then((r) => r.json());
+  return scenesPromise;
+}
 const TABS: { id: Tab; label: string }[] = [
   { id: 'inbox', label: 'INBOX' }, { id: 'map', label: 'CASE' }, { id: 'verify', label: 'VERIFY' },
   { id: 'radar', label: 'RADAR' }, { id: 'place', label: 'MY PLACE' },
@@ -94,7 +100,7 @@ function Inbox({ caseData, onOpen, queuedCount }: { caseData: CaseData; onOpen: 
 
   async function downloadCase() {
     // 1) Case JSON + shell into the case cache (the progress ring's first half).
-    const urls = ['/data/case.json', '/data/manifest.json', '/', '/icons/icon.svg'];
+    const urls = ['/data/case.json', '/data/manifest.json', '/data/scenes.json', '/', '/icons/icon.svg'];
     const cache = await caches.open('trace-case-v1');
     for (let i = 0; i < urls.length; i++) { await cache.add(urls[i]); setDl(Math.round(((i + 1) / urls.length) * 50)); }
     // 2) Basemap tiles for the case area, zooms 10-13 — fetched through the
@@ -188,7 +194,11 @@ function CaseMap({ caseData, manifest, sel, onSelect, onPassport, onVerify }: {
   onSelect: (c: Candidate) => void; onPassport: () => void; onVerify: () => void;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
+  const mapRef2 = useRef<import('maplibre-gl').Map | null>(null);
+  const [sceneOn, setSceneOn] = useState(true);
   const [dateIdx, setDateIdx] = useState(caseData.dates.length - 1);
+  const dateIdxRef = useRef(dateIdx);
+  dateIdxRef.current = dateIdx;
   const hh = useTick(sel.hhIntensity[dateIdx], 0);
   const hvRaw = sel.hvIntensity[dateIdx];
   const hv = useTick(hvRaw ?? 0, 0);
@@ -208,8 +218,19 @@ function CaseMap({ caseData, manifest, sel, onSelect, onPassport, onVerify }: {
         },
         center: [caseData.site.lon, caseData.site.lat], zoom: 12,
       });
-      map.on('load', () => {
+      map.on('load', async () => {
         if (!map) return;
+        mapRef2.current = map;
+        // The actual NISAR HH scene (browse render) under the polygons,
+        // switched by the date scrubber. AOI corners, north-up.
+        const scenes = await loadScenes().catch(() => ({} as Record<string, string>));
+        if (!map) return;
+        map.addSource('nisar-scene', {
+          type: 'image',
+          url: scenes[caseData.dates[dateIdxRef.current]] ?? '',
+          coordinates: [[89.58, 25.70], [89.82, 25.70], [89.82, 25.44], [89.58, 25.44]],
+        } as never);
+        map.addLayer({ id: 'nisar-scene', type: 'raster', source: 'nisar-scene', paint: { 'raster-opacity': 0.92 } });
         // Amber hatching for the contested fringe: pattern generated at runtime.
         const cv = document.createElement('canvas'); cv.width = cv.height = 8;
         const g = cv.getContext('2d')!; g.strokeStyle = '#FFB224'; g.lineWidth = 2;
@@ -234,13 +255,30 @@ function CaseMap({ caseData, manifest, sel, onSelect, onPassport, onVerify }: {
     return () => { dead = true; map?.remove(); };
   }, [caseData]);
 
+  useEffect(() => {
+    const map = mapRef2.current;
+    if (!map || !map.getSource('nisar-scene')) return;
+    let live = true;
+    void loadScenes().then((scenes) => {
+      if (!live || !mapRef2.current) return;
+      const src = mapRef2.current.getSource('nisar-scene') as unknown as { updateImage: (o: { url: string }) => void };
+      const url = scenes[caseData.dates[dateIdx]];
+      if (url) src.updateImage({ url });
+      mapRef2.current.setLayoutProperty('nisar-scene', 'visibility', sceneOn ? 'visible' : 'none');
+    });
+    return () => { live = false; };
+  }, [dateIdx, sceneOn, caseData]);
+
   const granule = manifest.granules[dateIdx];
   return (
     <>
       <div ref={mapRef} className="mapbox" />
       <div className="mono dim" style={{ fontSize: 11, marginTop: 6 }}>
-        Solid = robust core · amber hatch = contested fringe · dashed = earlier boundary. Basemap © OSM (ODbL).
+        Solid = robust core · amber hatch = contested fringe · dashed = earlier boundary. Underneath: the actual NISAR HH scene for the selected date. Basemap © OSM (ODbL).
       </div>
+      <button className="chip" style={{ minHeight: 40, cursor: 'pointer', color: sceneOn ? '#FFB224' : undefined }} onClick={() => setSceneOn(!sceneOn)}>
+        {sceneOn ? 'NISAR SCENE: ON' : 'NISAR SCENE: OFF'}
+      </button>
       <div className="scrub">
         {caseData.dates.map((d, i) => (
           <button key={d} className={i === dateIdx ? 'active' : ''} onClick={() => setDateIdx(i)}>{d.slice(5)}</button>
@@ -427,6 +465,8 @@ function WalkRadar({ caseData }: { caseData: CaseData }) {
     const values = caseData.walkGrid.values;
     return { N: values.length, cells: values.flat() };
   }, [caseData]);
+  const [gpsOn, setGpsOn] = useState(false);
+  const [posPx, setPosPx] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const cv = canvasRef.current; if (!cv) return;
@@ -436,7 +476,28 @@ function WalkRadar({ caseData }: { caseData: CaseData }) {
       g.fillStyle = v < 45 ? '#12484d' : `rgb(${Math.round(30 + t * 225)},${Math.round(40 + t * 140)},${Math.round(45 + t * 40)})`;
       g.fillRect((i % N) * s, Math.floor(i / N) * s, s + 1, s + 1);
     }
-  }, [grid]);
+    if (posPx) {
+      g.strokeStyle = '#FFB224'; g.lineWidth = 3;
+      g.beginPath(); g.arc(posPx.x * cv.width, posPx.y * cv.height, 10, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = '#FFB224'; g.beginPath(); g.arc(posPx.x * cv.width, posPx.y * cv.height, 3, 0, Math.PI * 2); g.fill();
+    }
+  }, [grid, posPx]);
+
+  // GPS walk: your position inside the case area samples the same real grid.
+  useEffect(() => {
+    if (!gpsOn || !navigator.geolocation) return;
+    const id = navigator.geolocation.watchPosition((p) => {
+      const lon = p.coords.longitude, lat = p.coords.latitude;
+      const fx = (lon - 89.58) / (89.82 - 89.58);
+      const fy = (25.70 - lat) / (25.70 - 25.44);
+      if (fx < 0 || fx > 1 || fy < 0 || fy > 1) { setPosPx(null); return; }
+      setPosPx({ x: fx, y: fy });
+      const gx = Math.min(grid.N - 1, Math.floor(fx * grid.N));
+      const gy = Math.min(grid.N - 1, Math.floor(fy * grid.N));
+      setVal(grid.cells[gy * grid.N + gx]);
+    }, () => setGpsOn(false), { enableHighAccuracy: true });
+    return () => navigator.geolocation.clearWatch(id);
+  }, [gpsOn, grid]);
 
   function probe(e: React.PointerEvent) {
     const cv = canvasRef.current!; const r = cv.getBoundingClientRect();
@@ -465,6 +526,8 @@ function WalkRadar({ caseData }: { caseData: CaseData }) {
         <canvas ref={canvasRef} width={480} height={480} />
         <div className="dbread">{val === null ? 'HH —' : `HH ${Math.round(val)} / 255`}</div>
       </div>
+      <button className="btn ghost" onClick={() => setGpsOn(!gpsOn)}>{gpsOn ? 'GPS walk: on — you are the amber ring' : 'Walk it with GPS instead'}</button>
+      {gpsOn && !posPx && <p className="dim" style={{ fontSize: 12.5 }}>GPS is on but you are outside the case area (the Jamuna reach around Chilmari) — the ring appears when you step inside it.</p>}
       <p className="dim" style={{ fontSize: 13 }}>
         {val !== null && <span className="mono" style={{ color: 'var(--bone)' }}>Under your finger: {cls}. </span>}
         Pitch and vibration follow the real HH browse intensity under your finger — dark smooth water low, bright land high.
