@@ -181,6 +181,13 @@ function Inbox({ caseData, onOpen, queuedCount }: { caseData: CaseData; onOpen: 
       </div>
 
       <div className="card" style={{ cursor: 'default' }}>
+        <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>MISSION REPLAY — HOW THIS INVESTIGATION UNFOLDED</div>
+        {replay.map((e, i) => (
+          <div key={i} className="rowline"><span className="mono dim">{e.t}</span><span style={{ fontSize: 13, color: e.kind === 'evidence' ? 'var(--amber)' : undefined }}>{e.label}</span></div>
+        ))}
+      </div>
+
+      <div className="card" style={{ cursor: 'default' }}>
         <div className="mono amber" style={{ fontSize: 11, letterSpacing: 1.5 }}>WEB REVIEW — EVIDENCE RETURN</div>
         <div className="verdict" style={{ fontSize: 22, margin: '6px 0' }}>{awaiting} observation{awaiting === 1 ? '' : 's'} awaiting review</div>
         {inbox.map((row, i) => (
